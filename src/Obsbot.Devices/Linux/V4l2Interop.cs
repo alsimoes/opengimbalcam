@@ -59,6 +59,9 @@ internal static class V4l2Cid
     public const uint AutoWhiteBalance = UserBase + 12;
     public const uint Gamma = UserBase + 16;
     public const uint Gain = UserBase + 19;
+
+    /// <summary>Menu: 0 = disabled, 1 = 50 Hz, 2 = 60 Hz, 3 = auto.</summary>
+    public const uint PowerLineFrequency = UserBase + 24;
     public const uint WhiteBalanceTemperature = UserBase + 26;
     public const uint Sharpness = UserBase + 27;
     public const uint BacklightCompensation = UserBase + 28;

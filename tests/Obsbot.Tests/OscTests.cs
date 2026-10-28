@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using Obsbot.Core.Camera;
+using Obsbot.Core.Protocol;
 using Obsbot.Osc.Bridge;
 using Obsbot.Osc;
 using Xunit;
@@ -171,10 +172,117 @@ public class BridgeTests
     public async Task KnownButUnsupportedAddressesDoNothing()
     {
         var (bridge, hub) = Make();
-        Assert.Null(await bridge.ExecuteAsync(new OscMessage(G + "WakeSleep", 0)));
+        Assert.Null(await bridge.ExecuteAsync(new OscMessage(G + "SetZoneTrack", 1)));
         Assert.Null(await bridge.ExecuteAsync(new OscMessage("/OBSBOT/Nope", 0)));
         Assert.Empty(hub.Cams[0].Calls);
     }
+
+    [Fact]
+    public async Task OnlyRoutesWithoutEffectOnTheTinyRemainUnimplemented()
+    {
+        var (bridge, _) = Make();
+        string[] missing = bridge.Routes.Where(r => r.Handler is null).Select(r => r.Address[OscBridge.Prefix.Length..]).Order().ToArray();
+        Assert.Equal(
+            ["General/SetAutoFocusMode", "General/SetGimWhiteBalanceShift", "General/SetRBGain", "General/SetZoneTrack", "General/TriggerZonePreset",
+             "Meet/GetAutoFramingInfo", "Meet/GetPresetPositionInfo", "Meet/GetVirtualBackgroundInfo", "Meet/SetAutoFraming", "Meet/SetStandardMode",
+             "Meet/SetVirtualBackground", "Tiny/SetTrackingSpeed"],
+            missing);
+        await Task.CompletedTask;
+    }
+
+    [Theory]
+    [InlineData("SetAntiFlicker", 1, "raw PowerlineFrequency 1")]
+    [InlineData("SetAutoExposureMode", 5, "cmd face-ae 1")]
+    [InlineData("SetExposureCompensate", -10, "raw BacklightCompensation 6")]
+    [InlineData("SetHDR", 2, "cmd hdr 1")]
+    [InlineData("SetISO", 400, "raw Gain 4")]
+    [InlineData("SetShutterSpeed", 100, "shutter 100")]
+    [InlineData("WakeSleep", 0, "cameraSetDevRunStatusR: sender=1 set=1 id=0x02 payload=0103")]
+    public async Task GeneralRoutesReachTheCamera(string route, int value, string call)
+    {
+        var (bridge, hub) = Make();
+        await bridge.ExecuteAsync(new OscMessage(G + route, value));
+        Assert.Equal(call, hub.Cams[0].Calls.Single());
+    }
+
+    [Theory]
+    [InlineData("SetAntiFlicker")]
+    [InlineData("SetAutoExposureMode")]
+    [InlineData("SetExposureCompensate")]
+    public async Task AutoExposureOnlyRoutesAreIgnoredInManualExposure(string route)
+    {
+        var (bridge, hub) = Make();
+        hub.Cams[0].AutoExposure = false;
+        await bridge.ExecuteAsync(new OscMessage(G + route, 1));
+        Assert.Empty(hub.Cams[0].Calls);
+    }
+
+    [Theory]
+    [InlineData("SetAiMode", 1, "cmd ai-mode 2 0")]
+    [InlineData("SetAiMode", 9, "cmd ai-mode 1 0")]
+    [InlineData("SetTrackingMode", 0, "aiSetTrackingModeR: sender=3 set=3 id=0x11 payload=01")]
+    [InlineData("SetTrackingMode", 1, "aiSetTrackingModeR: sender=3 set=3 id=0x11 payload=00")]
+    [InlineData("ToggleAILock", 1, "aiSetTargetSelectR: sender=3 set=3 id=0x0F payload=00")]
+    [InlineData("ToggleAILock", 0, "aiSetTargetSelectR: sender=3 set=3 id=0x0E payload=")]
+    public async Task TinyRoutesFollowObsbotCenter(string route, int value, string call)
+    {
+        var (bridge, hub) = Make();
+        await bridge.ExecuteAsync(new OscMessage(OscBridge.Prefix + "Tiny/" + route, value));
+        Assert.Equal(call, hub.Cams[0].Calls.Single());
+    }
+
+    [Fact]
+    public async Task GimMotorDegreeSendsSpeedsThenPositions()
+    {
+        var (bridge, hub) = Make();
+        await bridge.ExecuteAsync(new OscMessage(G + "SetGimMotorDegree", 200, 30, -70));
+        // speed clamped to 90, pitch to -59: 9000 x3, roll 0, pitch -5900, yaw 3000 (int16 LE)
+        Assert.Equal("gimbalSetSpeedPositionR: sender=2 set=2 id=0x03 payload=2823282328230000F4E8B80B", hub.Cams[0].Calls.Single());
+    }
+
+    [Fact]
+    public async Task GimMotorDegreeExAcceptsASerialNumber()
+    {
+        var (bridge, hub) = Make();
+        await bridge.ExecuteAsync(new OscMessage(G + "SetGimMotorDegreeEx", "SN123", 10f, 0f, 0f));
+        Assert.StartsWith("gimbalSetSpeedPositionR:", hub.Cams[0].Calls.Single());
+    }
+
+    [Fact]
+    public async Task WakeSleepIsReportedInDeviceInfo()
+    {
+        var (bridge, _) = Make();
+        await bridge.ExecuteAsync(new OscMessage(G + "WakeSleep", 0));
+        var info = await bridge.ExecuteAsync(new OscMessage(G + "GetDeviceInfo", 0));
+        Assert.Equal(0, info!.Args[9]);
+    }
+
+    [Fact]
+    public async Task PcRoutesUseTheMediaHandler()
+    {
+        var hub = new FakeHub(1);
+        var media = new FakeMedia();
+        var bridge = new OscBridge(hub, _ => { }, media);
+        await bridge.ExecuteAsync(new OscMessage(G + "PCSnapshot", 1));
+        await bridge.ExecuteAsync(new OscMessage(G + "SetPCRecording", 1));
+        Assert.Equal(["snapshot 0", "record 0 True False"], media.Calls);
+    }
+
+    [Theory]
+    [InlineData(-30, 0)]
+    [InlineData(0, 9)]
+    [InlineData(7, 11)]
+    [InlineData(30, 18)]
+    [InlineData(99, 18)]
+    public void EvIndexFollowsTheThirdStopTable(int evTimesTen, int index) =>
+        Assert.Equal(index, OscBridge.EvIndex(evTimesTen));
+
+    [Theory]
+    [InlineData(-13, -2, 100, -7)]   // DirectShow: log2(1/100 s)
+    [InlineData(-13, -2, 8000, -13)]
+    [InlineData(1, 5000, 100, 100)]  // V4L2: 100 µs units
+    public void ShutterSpeedMapsToThePlatformUnits(int min, int max, int denominator, int expected) =>
+        Assert.Equal(expected, ObsbotCamera.ExposureValue(new ControlRange(min, max, 1, min, default), denominator));
 
     [Fact]
     public void RouteTableCoversEveryWebcamAddressOfObsbotMain()
@@ -269,6 +377,7 @@ internal sealed class FakeCamera(string name) : ICamera
     public int Zoom { get; set; }
     public string Name => name;
     public int ProductCode => 0;
+    public bool AutoExposure { get; set; } = true;
 
     public void SetPanTiltSpeed(double pan, double tilt) => Calls.Add($"pantilt {pan:0.##} {tilt:0.##}");
     public void ResetPanTilt() => Calls.Add("reset");
@@ -281,8 +390,20 @@ internal sealed class FakeCamera(string name) : ICamera
     public void SetAuto(UvcControl control, bool auto) => Calls.Add($"auto {control} {auto}");
     public void SetPercent(UvcControl control, int percent) => Calls.Add($"pct {control} {percent}");
     public void SetRaw(UvcControl control, int value) => Calls.Add($"raw {control} {value}");
+    public bool? IsAuto(UvcControl control) => control == UvcControl.Exposure ? AutoExposure : null;
+    public void SetShutterSpeed(int denominator) => Calls.Add($"shutter {denominator}");
+    public void SendCommand(string name, params int[] args) => Calls.Add($"cmd {name} {string.Join(' ', args)}");
+    public void SendMessage(RemoRequest request) => Calls.Add(request.ToString());
 
     public void Dispose()
     {
     }
+}
+
+internal sealed class FakeMedia : IPcMedia
+{
+    public List<string> Calls { get; } = [];
+
+    public void Snapshot(int device) => Calls.Add($"snapshot {device}");
+    public void SetRecording(int device, bool on, bool highFps) => Calls.Add($"record {device} {on} {highFps}");
 }

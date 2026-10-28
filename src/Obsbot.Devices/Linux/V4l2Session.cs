@@ -122,6 +122,7 @@ internal sealed unsafe class V4l2Session : ICameraSession
         CameraControl.WhiteBalance => new(V4l2Cid.WhiteBalanceTemperature, AutoId: V4l2Cid.AutoWhiteBalance),
         CameraControl.BacklightCompensation => new(V4l2Cid.BacklightCompensation),
         CameraControl.Gain => new(V4l2Cid.Gain),
+        CameraControl.PowerlineFrequency => new(V4l2Cid.PowerLineFrequency),
         _ => null, // Roll: uvcvideo has no mapping
     };
 

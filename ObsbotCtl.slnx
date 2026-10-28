@@ -4,6 +4,7 @@
     <Project Path="src/Obsbot.Devices/Obsbot.Devices.csproj" />
     <Project Path="src/Obsbot.Osc/Obsbot.Osc.csproj" />
     <Project Path="src/ObsbotCtl/ObsbotCtl.csproj" />
+    <Project Path="src/ObsbotStudio/ObsbotStudio.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Obsbot.Tests/Obsbot.Tests.csproj" />

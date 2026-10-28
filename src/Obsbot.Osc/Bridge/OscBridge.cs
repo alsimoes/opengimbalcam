@@ -1,3 +1,4 @@
+using Obsbot.Core.Protocol;
 using Obsbot.Osc;
 
 namespace Obsbot.Osc.Bridge;
@@ -26,11 +27,15 @@ public sealed class OscBridge
     private readonly SemaphoreSlim _cameraLock = new(1, 1);
     private readonly HashSet<string> _warned = [];
     private readonly Dictionary<string, OscRoute> _routes;
+    private readonly Dictionary<ICamera, DeviceState> _state = new(ReferenceEqualityComparer.Instance);
+    private readonly IPcMedia? _media;
 
-    public OscBridge(ICameraHub hub, Action<string> log)
+    /// <param name="media">Snapshot/recording on the PC; null where there is no video (the CLI server).</param>
+    public OscBridge(ICameraHub hub, Action<string> log, IPcMedia? media = null)
     {
         _hub = hub;
         _log = log;
+        _media = media;
         _routes = BuildRoutes().ToDictionary(r => r.Address, StringComparer.Ordinal);
     }
 
@@ -74,7 +79,8 @@ public sealed class OscBridge
         }
         else if (argc == route.Values + 1)
         {
-            device = message.Int(0);
+            // SetGimMotorDegreeEx names the device by serial number, which UVC does not expose.
+            device = message.Args[0] is string ? SelectedDevice : message.Int(0);
             first = 1;
         }
         else
@@ -98,6 +104,11 @@ public sealed class OscBridge
             }
             return route.Handler(cameras[device], message, values);
         }
+        catch (Exception ex) when (ex is NotSupportedException or Obsbot.Core.Camera.XuException)
+        {
+            _log($"{message.Address}: {ex.Message}");
+            return null;
+        }
         finally
         {
             _cameraLock.Release();
@@ -120,7 +131,6 @@ public sealed class OscBridge
     private IEnumerable<OscRoute> BuildRoutes()
     {
         const string G = Prefix + "General/", T = Prefix + "Tiny/", M = Prefix + "Meet/";
-        const string Msg = "usa o canal de mensagens 0xAA da libdev, cujas tabelas de IDs não foram totalmente recuperadas";
 
         // --- sessão ---------------------------------------------------------
         yield return new(G + "Connected", 1, (_, _, _) => { _hub.Refresh(); return new OscMessage(G + "ConnectedResp", 1); },
@@ -172,41 +182,178 @@ public sealed class OscBridge
         yield return new(T + "TriggerPreset", 1, (c, _, v) => { c.TriggerPreset(v[0]); return null; },
             "0x1140D0/0x115150 -> cameraTriCameraPreset ou aiTrgGimbalPresetR; aqui: XU 7 (cameraTrgGimbalPresetU, modelos antigos)");
 
-        // --- conhecidos, não implementados -----------------------------------------
+        // --- exposição e imagem (UVC + XU 6) ------------------------------------------
+        // OBSBOT_Main only applies these three while exposure is automatic (cameraGetExposureAbsolute).
+        yield return new(G + "SetAntiFlicker", 1, (c, m, v) => WhenAutoExposure(c, m, () =>
+            {
+                if (v[0] is >= 0 and <= 2)
+                    c.SetRaw(UvcControl.PowerlineFrequency, v[0]);
+            }),
+            "0x11C7E0 -> cameraSetAntiFlickR(0..2), só com exposição automática: na UVC, IAMVideoProcAmp PowerlineFrequency (0 = desligado, 1 = 50 Hz, 2 = 60 Hz)");
+        yield return new(G + "SetAutoExposureMode", 1, (c, m, v) => WhenAutoExposure(c, m, () => c.SendCommand("face-ae", Math.Clamp(v[0], 0, 1))),
+            "0x11B5A0 -> cameraSetFaceAER(0/1), só com exposição automática: XU 6 cmd 03");
+        yield return new(G + "SetExposureCompensate", 1, (c, m, v) => WhenAutoExposure(c, m, () => c.SetRaw(UvcControl.BacklightCompensation, EvIndex(v[0]))),
+            "0x11B930 -> cameraSetPAEEvBiasR(índice), só com exposição automática: valor/10 = EV, tabela de 19 passos de 1/3 EV (-3..+3, RVA 0x8C600) -> BacklightCompensation 0..18");
+        yield return new(G + "SetHDR", 1, (c, _, v) => { c.SendCommand("hdr", v[0] != 0 ? 1 : 0); return null; },
+            "0x11A3A0 -> cameraSetWdrR: XU 6 cmd 01");
+        yield return new(G + "SetISO", 1, (c, _, v) => { c.SetRaw(UvcControl.Gain, (int)Math.Round(v[0] / 100.0)); return null; },
+            "0x11C3E0 -> cameraSetMAEIsoR(ISO/100): tabela (i, i*100), i = 1..128 (RVA 0x8C910) -> IAMVideoProcAmp Gain (a Tiny só aplica com exposição manual)");
+        yield return new(G + "SetShutterSpeed", 1, (c, _, v) => { c.SetShutterSpeed(v[0]); return null; },
+            "0x11BDC0 -> cameraSetExposureAbsolute(manual): valor = denominador (1/N s, tabela 6400..2 em RVA 0x8CDD0); aqui: log2(1/N) no DirectShow, 10000/N no V4L2");
+
+        // --- estado e gimbal pelo canal 0xAA ---------------------------------------
+        yield return new(G + "WakeSleep", 1, (c, _, v) =>
+            {
+                c.SendMessage(RemoV1.DevRunStatus(v[0] == 0 ? (byte)3 : (byte)1));
+                StateOf(c).Awake = v[0] != 0;
+                return null;
+            },
+            "0x110450 -> cameraSetDevRunStatusR(0 -> 3 dormir, outro -> 1 acordar): mensagem 0xAA set 1 id 2 (V1: 0x3C2), payload [1, estado]");
+        yield return new(G + "SetGimMotorDegree", 3, (c, _, v) => GimbalTo(c, Math.Clamp(v[0], 0, 90), v[1], v[2]),
+            "0x113110 -> gimbalSetSpeedPositionR(0, pitch, yaw, v, v, v) com (velocidade 0..90, pan ±129, pitch ±59): mensagem 0xAA set 2 id 3 (V1: 0x006)");
+        yield return new(G + "SetGimMotorDegreeEx", 3, (c, _, v) => GimbalTo(c, Math.Clamp(v[0], 0, 90), v[1], v[2]),
+            "0x113420 -> gimbalSetSpeedPositionR; o argumento extra da frente identifica o aparelho (número de série) e os valores são float");
+        yield return new(G + "SetPTZValue", 3, (c, _, v) => PtzValue(c, v[0], v[1], v[2]),
+            "0x119C90 -> aiSetTargetSelectR(false) + gimbalSetSpeedPositionR (tempo = maior deslocamento / 20 °/s, até 3 s) + cameraSetZoomAbsoluteR(1 + z/100), com (pan ±130, pitch ±60, zoom 0..100)");
+
+        // --- IA (Tiny) -------------------------------------------------------------
+        yield return new(T + "SetAiMode", 1, (c, _, v) => AiMode(c, v[0]),
+            "0x116830 -> cameraSetAiModeU(modo, submodo): XU 6 cmd 16, valor pela tabela de saltos em RVA 0x117164");
+        yield return new(T + "SetTrackingMode", 1, (c, _, v) => TrackingMode(c, v[0]),
+            "0x117190 -> aiSetTrackingModeR(1 -> 0, 2 -> 2, 0 -> 1): mensagem 0xAA set 3 id 0x11 (V1: 0x091)");
+        yield return new(T + "ToggleAILock", 1, (c, _, v) => AiLock(c, v[0] == 1),
+            "0x113B10 -> aiSetTargetSelectR(v == 1): mensagem 0xAA set 3 id 0x0F/0x0E (V1: 0x067/0x066)");
+        yield return new(T + "GetAiTrackingInfo", 1, (c, _, _) => new OscMessage(T + "AiTrackingInfo", StateOf(c).AiMode != 0 ? 1 : 0),
+            "0x11FF50 -> sendAiTrackingInfo (0x1220B0): ,i; aqui: 1 se o último SetAiMode/ToggleAILock ligou a IA");
+        yield return new(T + "GetPresetPositionInfo", 1, (_, _, _) => new OscMessage(T + "PresetPositionInfo", 0, "Preset 1", 1, "Preset 2", 2, "Preset 3"),
+            "0x11FA10 -> sendPresetPositionInfo (0x121E60): ,isisis (3 x id, nome); os nomes vêm da UI do OBSBOT Center, aqui são genéricos");
+
+        // --- vídeo no PC -----------------------------------------------------------
+        yield return new(G + "PCSnapshot", 1, (_, _, _) => Media(m => m.Snapshot(SelectedDevice)),
+            "0x1349F0: foto feita pelo processo de mídia do OBSBOT Center; aqui: pelo vídeo do obsbot-studio");
+        yield return new(G + "SetPCRecording", 1, (_, _, v) => Media(m => m.SetRecording(SelectedDevice, v[0] == 1, highFps: false)),
+            "0x1353D0: gravação no PC pelo processo de mídia; aqui: AVI MJPEG pelo vídeo do obsbot-studio");
+        yield return new(G + "SetHighfpsRecording", 1, (_, _, v) => Media(m => m.SetRecording(SelectedDevice, v[0] == 1, highFps: true)),
+            "0x135B80: gravação em alta taxa de quadros; aqui: igual a SetPCRecording, na taxa do vídeo aberto");
+
+        // --- conhecidos, sem efeito na Tiny ---------------------------------------
+        // The project targets the OBSBOT Tiny (PID FEF0) only; these exist for other models.
+        const string V3 = "o comando só existe no protocolo 0xAA V3 dos modelos mais novos; a tabela V1 da Tiny não tem esse id";
+        const string Meet = "só para a OBSBOT Meet";
         foreach (var (addr, values, why) in new (string, int, string)[]
         {
-            (G + "WakeSleep", 1, "0x110450 -> cameraSetDevRunStatusR(0 -> 3, outro -> 1): " + Msg),
-            (G + "SetGimMotorDegree", 3, "0x113110 -> gimbalSetSpeedPositionR: " + Msg),
-            (G + "SetGimMotorDegreeEx", 4, "0x113420 -> gimbalSetSpeedPositionR: " + Msg),
-            (G + "SetPTZValue", 3, "0x119C90 -> gimbalSetSpeedPositionR/aiSetGimbalMotorAngleR: " + Msg),
-            (G + "SetHDR", 1, "0x11A3A0 -> cameraSetWdrR: " + Msg),
-            (G + "SetAutoFocusMode", 1, "0x11AA80 -> cameraSetFaceFocusR: " + Msg),
-            (G + "SetAutoExposureMode", 1, "0x11B5A0 -> cameraSetFaceAER: " + Msg),
-            (G + "SetExposureCompensate", 1, "0x11B930 -> cameraSetPAEEvBiasR: " + Msg),
-            (G + "SetShutterSpeed", 1, "0x11BDC0: mapeamento valor -> exposição UVC não recuperado"),
-            (G + "SetISO", 1, "0x11C3E0 -> cameraSetMAEIsoR: " + Msg),
-            (G + "SetAntiFlicker", 1, "0x11C7E0 -> cameraSetAntiFlickR: " + Msg),
-            (G + "SetGimWhiteBalanceShift", 2, "0x11CF00 -> cameraSetWhiteBalanceSetting: " + Msg),
-            (G + "SetRBGain", 2, "0x11D3E0 -> cameraSetWhiteBalanceSetting: " + Msg),
-            (G + "SetZoneTrack", 1, "0x119620 -> aiSetZoneTrackStateR: " + Msg),
-            (G + "TriggerZonePreset", 1, "0x119970 -> aiTrgZonePresetR: " + Msg),
-            (G + "SetPCRecording", 1, "0x1353D0: gravação no PC, feita pelo processo de mídia (OBSBOT_Center.exe)"),
-            (G + "SetHighfpsRecording", 1, "0x135B80: gravação no PC, feita pelo processo de mídia"),
-            (G + "PCSnapshot", 1, "0x1349F0: captura no PC, feita pelo processo de mídia"),
-            (T + "ToggleAILock", 1, "0x113B10 -> aiSetTargetSelectR / cameraSetAiModeU, decidido pelo estado da UI"),
-            (T + "SetAiMode", 1, "0x116830: clica botões da UI conforme o modelo; mapeamento valor -> cameraSetAiModeU não recuperado"),
-            (T + "SetTrackingMode", 1, "0x117190 -> aiSetTrackingModeR: " + Msg),
-            (T + "SetTrackingSpeed", 1, "0x117550 -> aiSetControlParaR: " + Msg),
-            (T + "GetPresetPositionInfo", 1, "0x11FA10: lê presets do estado da UI do OBSBOT Center"),
-            (T + "GetAiTrackingInfo", 1, "0x11FF50: lê o estado da UI do OBSBOT Center"),
-            (M + "SetVirtualBackground", 1, "0x1156C0 -> cameraSetMediaModeU + cameraSetBgModeU, só modelos Meet"),
-            (M + "SetAutoFraming", 1, "0x115E10 -> cameraSetAutoFramingModeU, só modelos Meet"),
-            (M + "SetStandardMode", 1, "0x116420 -> cameraSetMediaModeU, só modelos Meet"),
-            (M + "GetPresetPositionInfo", 1, "0x11FCB0: estado da UI"),
-            (M + "GetVirtualBackgroundInfo", 1, "0x1201F0: estado da UI"),
-            (M + "GetAutoFramingInfo", 1, "0x120490: estado da UI"),
+            (G + "SetGimWhiteBalanceShift", 2, "0x11CF00 -> cameraSetWhiteBalanceSetting, set 1 id 0x0B: " + V3),
+            (G + "SetRBGain", 2, "0x11D3E0 -> cameraSetWhiteBalanceSetting, set 1 id 0x0B: " + V3),
+            (G + "SetZoneTrack", 1, "0x119620 -> aiSetZoneTrackStateR, set 3 id 0x5D: " + V3),
+            (G + "TriggerZonePreset", 1, "0x119970 -> aiTrgZonePresetR, set 3 id 0x1D: " + V3),
+            (T + "SetTrackingSpeed", 1, "0x117550 -> aiSetControlParaR(0, 5, 0/2/3), set 3 id 0x84: " + V3),
+            (G + "SetAutoFocusMode", 1, "0x11AA80 -> cameraSetFaceFocusR: foco por rosto; a Tiny tem foco fixo (sem controle UVC de foco)"),
+            (M + "SetVirtualBackground", 1, "0x1156C0 -> cameraSetMediaModeU + cameraSetBgModeU: " + Meet),
+            (M + "SetAutoFraming", 1, "0x115E10 -> cameraSetMediaModeU + cameraSetAutoFramingModeU: " + Meet),
+            (M + "SetStandardMode", 1, "0x116420 -> cameraSetMediaModeU(0): " + Meet),
+            (M + "GetPresetPositionInfo", 1, "0x11FCB0 -> sendPresetPositionInfo: " + Meet),
+            (M + "GetVirtualBackgroundInfo", 1, "0x1201F0 -> sendVirtualBackgroundInfo: " + Meet),
+            (M + "GetAutoFramingInfo", 1, "0x120490 -> sendAutoFramingInfo: " + Meet),
         })
             yield return new(addr, values, null, why);
+    }
+
+    /// <summary>What the bridge remembers per device for replies OBSBOT Center builds from its UI.</summary>
+    private sealed class DeviceState
+    {
+        public bool Awake = true;
+        public int AiMode;
+    }
+
+    // Callers hold _cameraLock, so the dictionary needs no lock of its own.
+    private DeviceState StateOf(ICamera c)
+    {
+        if (!_state.TryGetValue(c, out var s))
+            _state[c] = s = new DeviceState();
+        return s;
+    }
+
+    private OscMessage? WhenAutoExposure(ICamera c, OscMessage m, Action action)
+    {
+        if (c.IsAuto(UvcControl.Exposure) == false)
+            _log($"{m.Address}: ignorado com exposição manual (o OBSBOT Center faz o mesmo)");
+        else
+            action();
+        return null;
+    }
+
+    /// <summary>OSC value = EV x 10; libdev's table is 19 steps of 1/3 EV from -3 to +3, index 9 = 0 EV.</summary>
+    internal static int EvIndex(int evTimesTen) => Math.Clamp((int)Math.Round(evTimesTen * 3 / 10.0) + 9, 0, 18);
+
+    /// <summary>gimbalSetSpeedPositionR as SetGimMotorDegree calls it: roll 0, every axis at the same speed.</summary>
+    private static OscMessage? GimbalTo(ICamera c, double speed, int pan, int pitch)
+    {
+        c.SendMessage(RemoV1.GimbalSpeedPosition(0, Math.Clamp(pitch, -59, 59), Math.Clamp(pan, -129, 129), speed, speed, speed));
+        return null;
+    }
+
+    private static OscMessage? PtzValue(ICamera c, int pan, int pitch, int zoom)
+    {
+        pan = Math.Clamp(pan, -130, 130);
+        pitch = Math.Clamp(pitch, -60, 60);
+        c.SendMessage(RemoV1.TargetSelect(false));
+        // OBSBOT reads the attitude with gimbalGetAttitudeInfoR. The UVC position is the same angle,
+        // but gimbal pitch is the opposite of UVC tilt (tested on the Tiny: pitch +5 -> tilt -4).
+        var (curPan, tilt) = c.GetPanTilt() ?? (0, 0);
+        int curPitch = -tilt;
+        double dPan = Math.Abs(pan - curPan), dPitch = Math.Abs(pitch - curPitch);
+        double seconds = Math.Min(Math.Max(dPan, dPitch) / 20.0, 3.0);
+        if (seconds > 0)
+            c.SendMessage(RemoV1.GimbalSpeedPosition(0, pitch, pan, 0, dPitch / seconds, dPan / seconds));
+        c.SetZoomPercent(Math.Clamp(zoom, 0, 100));
+        return null;
+    }
+
+    /// <summary>OSC SetAiMode value -> (AiWorkModeType, sub mode), jump table at RVA 0x117164.</summary>
+    internal static (int Mode, int Sub) AiModeFor(int value) => value switch
+    {
+        1 => (2, 0),
+        2 => (2, 1),
+        3 => (2, 2),
+        4 => (2, 3),
+        5 => (2, 4),
+        6 => (5, 0),
+        7 => (4, 0),
+        8 => (3, 0),
+        9 => (1, 0),
+        _ => (0, 0),
+    };
+
+    private OscMessage? AiMode(ICamera c, int value)
+    {
+        var (m, s) = AiModeFor(value);
+        c.SendCommand("ai-mode", m, s);
+        StateOf(c).AiMode = m;
+        return null;
+    }
+
+    private static OscMessage? TrackingMode(ICamera c, int value)
+    {
+        byte? mode = value switch { 0 => 1, 1 => 0, 2 => 2, _ => null };
+        if (mode is { } m)
+            c.SendMessage(RemoV1.TrackingMode(m));
+        return null;
+    }
+
+    private OscMessage? AiLock(ICamera c, bool on)
+    {
+        c.SendMessage(RemoV1.TargetSelect(on));
+        StateOf(c).AiMode = on ? 2 : 0;
+        return null;
+    }
+
+    private OscMessage? Media(Action<IPcMedia> action)
+    {
+        if (_media is null)
+            _log("sem vídeo neste processo: foto e gravação no PC só funcionam no obsbot-studio");
+        else
+            action(_media);
+        return null;
     }
 
     private static double Speed(int s) => Math.Min(Math.Clamp(s, 0, 100) * 0.01, 1.0);
@@ -237,7 +384,8 @@ public sealed class OscBridge
             args.Add(i < cams.Count ? cams[i].Name : "");
         }
         args.Add(SelectedDevice);
-        args.Add(1); // awake: the run status cannot be read without the 0xAA channel
+        // Run status: the last WakeSleep sent (reading it needs a 0xAA reply, not decoded yet).
+        args.Add(SelectedDevice < cams.Count && !StateOf(cams[SelectedDevice]).Awake ? 0 : 1);
         args.Add(SelectedDevice < cams.Count ? cams[SelectedDevice].ProductCode : 0);
         return new OscMessage(Prefix + "General/DeviceInfo", args);
     }

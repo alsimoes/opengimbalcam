@@ -158,6 +158,7 @@ internal sealed class DirectShowSession : ICameraSession
         CameraControl.WhiteBalance => VideoProcAmpProperty.WhiteBalance,
         CameraControl.BacklightCompensation => VideoProcAmpProperty.BacklightCompensation,
         CameraControl.Gain => VideoProcAmpProperty.Gain,
+        CameraControl.PowerlineFrequency => VideoProcAmpProperty.PowerlineFrequency,
         _ => null,
     };
 

@@ -16,7 +16,7 @@ internal static class Program
           info                                  Topologia UVC, onde está a XU OBSBOT e controles UVC padrão
           get <controle>                        Lê um controle UVC padrão (pan, tilt, zoom, focus, brightness...)
           set <controle> <valor|auto>           Escreve um controle UVC padrão
-          move <pan> <tilt> [--ms 500]          Pan/tilt relativo via XU (velocidades -255..255), depois para
+          move <pan> <tilt> [--ms 500] [--xu]   Pan/tilt relativo (UVC padrão; --xu: comando da XU), depois para
           cmds                                  Lista os comandos diretos conhecidos (seletor 6)
           cmd <nome> <args...>                  Envia um comando direto (seletor 6)
           preset <trigger|delete> <id>          Presets do gimbal em modelos antigos (seletor 7)
@@ -170,15 +170,29 @@ internal static class Program
 
     private static int Move(ICameraSession s, Args args)
     {
-        var xu = s.RequireXu();
         int pan = ParseInt(args.Positional(0));
         int tilt = ParseInt(args.Positional(1));
         int ms = args.Option("--ms") is { } m ? ParseInt(m) : 500;
 
-        xu.Set((uint)ObsbotXu.Selector.Command, DirectCommands.PanTiltRelative(pan, tilt));
+        // UVC CT_PANTILT_RELATIVE moves the Tiny; the XU command (09 04 …) only moves some models.
+        bool viaXu = args.Flag("--xu") || s.GetRange(CameraControl.PanRelative) is null;
+        void Send(int p, int t)
+        {
+            if (viaXu)
+            {
+                s.RequireXu().Set((uint)ObsbotXu.Selector.Command, DirectCommands.PanTiltRelative(p, t));
+            }
+            else
+            {
+                s.Set(CameraControl.PanRelative, Obsbot.Osc.Bridge.ObsbotCamera.PanRelativeValue(p));
+                s.Set(CameraControl.TiltRelative, t);
+            }
+        }
+
+        Send(pan, tilt);
         Thread.Sleep(ms);
-        xu.Set((uint)ObsbotXu.Selector.Command, DirectCommands.PanTiltRelative(0, 0));
-        Console.WriteLine($"pan={pan} tilt={tilt} por {ms} ms, parado.");
+        Send(0, 0);
+        Console.WriteLine($"pan={pan} tilt={tilt} por {ms} ms via {(viaXu ? "XU seletor 6" : "UVC PanTilt relativo")}, parado.");
         return 0;
     }
 
@@ -324,7 +338,7 @@ internal static class Program
     /// <summary>Tiny argument parser: command, positionals, "--name value" options and bare flags.</summary>
     private sealed class Args
     {
-        private static readonly HashSet<string> Flags = ["--force"];
+        private static readonly HashSet<string> Flags = ["--force", "--xu"];
         private readonly List<string> _positional = [];
         private readonly Dictionary<string, string> _options = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _flags = new(StringComparer.OrdinalIgnoreCase);

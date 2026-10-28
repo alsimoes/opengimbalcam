@@ -59,6 +59,7 @@ public static class DirectCommands
     public static readonly IReadOnlyList<DirectCommand> All =
     [
         new("media-mode", 0x00, 1, ArgKind.Bytes, "cameraSetMediaModeU", 0x2F397),
+        new("hdr", 0x01, 1, ArgKind.Bytes, "cameraSetWdrR", 0x2EE0E),
         new("face-ae", 0x03, 1, ArgKind.Bytes, "cameraSetFaceAER", 0x2E6EB),
         new("fov", 0x04, 1, ArgKind.Bytes, "cameraSetFovU", 0x2ECD9),
         new("bg-mode", 0x05, 1, ArgKind.Bytes, "cameraSetBgModeU", 0x2F449),

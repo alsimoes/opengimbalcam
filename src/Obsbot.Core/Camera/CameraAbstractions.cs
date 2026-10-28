@@ -32,6 +32,9 @@ public enum CameraControl
     WhiteBalance,
     BacklightCompensation,
     Gain,
+
+    /// <summary>Anti-flicker: 0 = off, 1 = 50 Hz, 2 = 60 Hz (libdev cameraSetAntiFlickR on UVC).</summary>
+    PowerlineFrequency,
 }
 
 [Flags]

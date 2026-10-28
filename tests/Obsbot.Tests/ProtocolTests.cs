@@ -83,4 +83,38 @@ public class ProtocolTests
         Assert.False(ObsbotXu.IsDangerous(2));
         Assert.False(ObsbotXu.IsDangerous(6));
     }
+
+    [Fact]
+    public void V1_requests_translate_logical_ids_to_wire_nibbles()
+    {
+        // aiSetTargetSelectR(true): sender 3, receiver 0x0B -> 14, set 3 -> 3, id 0x0F -> 0x67
+        var wire = RemoV1.ToWire(RemoV1.TargetSelect(true), 0x1234);
+        var frame = wire.Encode();
+        Assert.Equal("AA000D1012", Convert.ToHexString(frame[..5]));
+        Assert.Equal(0xE3, frame[9]);
+        Assert.Equal("306700", Convert.ToHexString(frame[10..]));
+        Assert.Equal(wire.ToString(), RemoMessage.TryDecode(frame, out _)?.ToString());
+    }
+
+    [Fact]
+    public void V1_run_status_uses_set1_id_0x3C2()
+    {
+        var wire = RemoV1.ToWire(RemoV1.DevRunStatus(3), 1);
+        Assert.Equal((1, 14, 1, 0x3C2), (wire.Sender, wire.Receiver, wire.CommandSet, wire.CommandId));
+        Assert.Equal(new byte[] { 1, 3 }, wire.Payload);
+    }
+
+    [Fact]
+    public void V1_rejects_commands_missing_from_its_tables()
+    {
+        var zoneTrack = new RemoRequest(3, 3, 0x5D, [1], "aiSetZoneTrackStateR");
+        Assert.False(RemoV1.IsSupported(zoneTrack));
+        Assert.Throws<NotSupportedException>(() => RemoV1.ToWire(zoneTrack, 1));
+    }
+
+    [Fact]
+    public void Hdr_is_direct_command_01()
+    {
+        Assert.Equal(new byte[] { 0x01, 0x01, 0x01 }, DirectCommands.Find("hdr")!.Build([1]));
+    }
 }
