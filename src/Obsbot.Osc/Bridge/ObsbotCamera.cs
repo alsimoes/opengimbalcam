@@ -26,7 +26,8 @@ public sealed class ObsbotCamera : ICamera
     // DeviceInfo's last argument selects the TouchOSC sample's page: 0, 1 or 6 = Tiny page.
     public int ProductCode => Info.Name.Contains("Tiny", StringComparison.OrdinalIgnoreCase) ? 0 : 2;
 
-    private ICameraSession Session => _session ??= _platform.Open(Info);
+    /// <summary>The underlying session, opened on first use.</summary>
+    public ICameraSession Session => _session ??= _platform.Open(Info);
 
     private IExtensionUnit Xu => Session.RequireXu();
 
@@ -34,11 +35,28 @@ public sealed class ObsbotCamera : ICamera
     {
         // libdev: clamp to [-1, 1], multiply by the max of the UVC PanRelative/TiltRelative
         // range and truncate (cameraSetPanTiltRelative, RVA 0x11BF0).
-        var (maxPan, maxTilt) = _maxSpeed ??= (
-            Session.GetRange(CameraControl.PanRelative)?.Max ?? 0,
-            Session.GetRange(CameraControl.TiltRelative)?.Max ?? 0);
-        Xu.Set((uint)ObsbotXu.Selector.Command, DirectCommands.PanTiltRelative(ScaleSpeed(pan, maxPan), ScaleSpeed(tilt, maxTilt)));
+        var panRange = Session.GetRange(CameraControl.PanRelative);
+        var tiltRange = Session.GetRange(CameraControl.TiltRelative);
+        var (maxPan, maxTilt) = _maxSpeed ??= (panRange?.Max ?? 0, tiltRange?.Max ?? 0);
+        int p = ScaleSpeed(pan, maxPan), t = ScaleSpeed(tilt, maxTilt);
+
+        if (panRange is not null && tiltRange is not null)
+        {
+            // Tested on the Tiny: the standard UVC CT_PANTILT_RELATIVE control moves the gimbal,
+            // while XU selector 6 (09 04 …) is accepted but ignored (OBSBOT Center only sends it
+            // to product types 5/6/10/13/25). A positive PanRelative lowers the absolute pan, so
+            // the sign is flipped to keep "pan +" = absolute pan increasing.
+            Session.Set(CameraControl.PanRelative, PanRelativeValue(p));
+            Session.Set(CameraControl.TiltRelative, t);
+        }
+        else
+        {
+            Xu.Set((uint)ObsbotXu.Selector.Command, DirectCommands.PanTiltRelative(p, t));
+        }
     }
+
+    /// <summary>UVC PanRelative value that moves towards increasing absolute pan for speed <paramref name="speed"/>.</summary>
+    public static int PanRelativeValue(int speed) => -speed;
 
     /// <summary>libdev's speed conversion: trunc(clamp(v, -1, 1) * range max).</summary>
     internal static int ScaleSpeed(double v, int rangeMax)
