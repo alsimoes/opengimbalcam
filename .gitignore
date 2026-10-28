@@ -1,1 +1,5 @@
 original-driver/
+bin/
+obj/
+*.user
+.vs/

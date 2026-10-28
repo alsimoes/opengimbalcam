@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Platform-independent: XU protocol, direct commands, 0xAA messages, firmware packages
+       and the camera abstractions implemented by Obsbot.Devices. -->
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Obsbot.Tests" />
+  </ItemGroup>
+
+</Project>

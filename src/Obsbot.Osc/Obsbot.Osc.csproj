@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- OSC server compatible with OBSBOT Center's /OBSBOT/WebCam/* protocol. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Obsbot.Core\Obsbot.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Obsbot.Tests" />
+  </ItemGroup>
+
+</Project>
