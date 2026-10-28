@@ -1,4 +1,5 @@
 using Obsbot.Core.Camera;
+using Obsbot.Core.Protocol;
 
 namespace Obsbot.Osc.Bridge;
 
@@ -12,6 +13,7 @@ public sealed class ObsbotCamera : ICamera
     private readonly ICameraPlatform _platform;
     private ICameraSession? _session;
     private (int Pan, int Tilt)? _maxSpeed;
+    private ushort _sequence = (ushort)Random.Shared.Next(1, 0x8000);
 
     public ObsbotCamera(ICameraPlatform platform, CameraInfo info)
     {
@@ -23,8 +25,9 @@ public sealed class ObsbotCamera : ICamera
 
     public string Name => Info.Name;
 
-    // DeviceInfo's last argument selects the TouchOSC sample's page: 0, 1 or 6 = Tiny page.
-    public int ProductCode => Info.Name.Contains("Tiny", StringComparison.OrdinalIgnoreCase) ? 0 : 2;
+    public int ProductCode => ObsbotProduct.TypeFromPid(Info.ProductId);
+
+    public RemoProtocol Protocol => ObsbotProduct.Protocol(ProductCode);
 
     /// <summary>The underlying session, opened on first use.</summary>
     public ICameraSession Session => _session ??= _platform.Open(Info);
@@ -120,6 +123,42 @@ public sealed class ObsbotCamera : ICamera
         Set(control, Math.Clamp(value, range.Min, range.Max), ControlFlags.Manual);
     }
 
+    public bool? IsAuto(UvcControl control) =>
+        Get(control) is { } v ? v.Flags.HasFlag(ControlFlags.Auto) : null;
+
+    public void SetShutterSpeed(int denominator)
+    {
+        var range = Range(UvcControl.Exposure) ?? throw Unsupported(UvcControl.Exposure);
+        Set(UvcControl.Exposure, Math.Clamp(ExposureValue(range, denominator), range.Min, range.Max), ControlFlags.Manual);
+    }
+
+    /// <summary>
+    /// Exposure for 1/<paramref name="denominator"/> s. DirectShow reports log2 seconds
+    /// (the Tiny: -13..-2), V4L2 exposure_absolute is in 100 µs units; a negative
+    /// minimum tells them apart.
+    /// </summary>
+    internal static int ExposureValue(ControlRange range, int denominator)
+    {
+        double seconds = 1.0 / Math.Max(denominator, 1);
+        return range.Min < 0
+            ? (int)Math.Round(Math.Log2(seconds))
+            : (int)Math.Round(seconds * 10_000);
+    }
+
+    public void SendCommand(string name, params int[] args)
+    {
+        var command = DirectCommands.Find(name) ?? throw new ArgumentException($"comando direto desconhecido: {name}", nameof(name));
+        Xu.Set((uint)ObsbotXu.Selector.Command, command.Build(args));
+    }
+
+    public void SendMessage(RemoRequest request)
+    {
+        if (Protocol != RemoProtocol.V1)
+            throw new NotSupportedException($"{Name}: o protocolo 0xAA V3 (tipo de produto {ProductCode}) não está implementado.");
+        var frame = RemoV1.ToWire(request, unchecked(_sequence++)).Encode();
+        Xu.Set((uint)ObsbotXu.Selector.Message, frame);
+    }
+
     public void Dispose()
     {
         _session?.Dispose();
@@ -150,6 +189,9 @@ public sealed class ObsbotCamera : ICamera
         UvcControl.Saturation => CameraControl.Saturation,
         UvcControl.Sharpness => CameraControl.Sharpness,
         UvcControl.Hue => CameraControl.Hue,
+        UvcControl.BacklightCompensation => CameraControl.BacklightCompensation,
+        UvcControl.Gain => CameraControl.Gain,
+        UvcControl.PowerlineFrequency => CameraControl.PowerlineFrequency,
         _ => throw new ArgumentOutOfRangeException(nameof(c), c, null),
     };
 }

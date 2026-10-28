@@ -28,6 +28,7 @@ Para gerar um executável autocontido: `dotnet publish src/ObsbotStudio -c Relea
 
 * Escolha da câmera, com as OBSBOT selecionadas automaticamente.
 * Vídeo ao vivo (via [FlashCap](https://github.com/kekyo/FlashCap): DirectShow no Windows, V4L2 no Linux; MJPEG até 1280×720). Com o vídeo aberto a câmera fica acordada: em suspensão ela aceita comandos de gimbal mas não se move.
+* Foto (JPEG em Imagens/OBSBOT Studio) e gravação (AVI MJPEG em Vídeos/OBSBOT Studio), também acionáveis pelo OSC (`PCSnapshot`, `SetPCRecording`).
 * Gimbal: segure as setas para mover (velocidade ao pressionar, parada ao soltar, como no OBSBOT Center), botão para centralizar e controle de velocidade.
 * Zoom, campo de visão (86°/78°/65°), espelho e presets.
 * Todos os controles UVC da câmera (exposição, balanço de branco, brilho, contraste…), com "Auto" onde a câmera oferece.
@@ -60,7 +61,7 @@ Com várias câmeras conectadas, use `-d <índice>` (veja `list`).
 
 ### Servidor OSC
 
-O comando reimplementa o "OBSBOT OSC Protocol" do OBSBOT Center (`/OBSBOT/WebCam/…`, porta 16284). Com ele, TouchOSC, Bitfocus Companion e plugins de Stream Deck controlam a câmera sem o OBSBOT Center:
+O comando reimplementa o "OBSBOT OSC Protocol" do OBSBOT Center (`/OBSBOT/WebCam/…`, porta 16284): 52 das 57 rotas, incluindo exposição, ISO, obturador, anti-flicker, HDR, modos de IA e posicionamento absoluto do gimbal pelo canal `0xAA`. Com ele, TouchOSC, Bitfocus Companion e plugins de Stream Deck controlam a câmera sem o OBSBOT Center:
 
 ```
 obsbotctl osc serve [--udp] [--tcp] [--port 16284] [--bind 0.0.0.0] [--reply-port N] [-q]
@@ -74,7 +75,7 @@ Feche o OBSBOT Center (ou desligue o OSC nele) antes de iniciar o servidor, porq
 
 | Caminho | Conteúdo |
 |---|---|
-| `src/Obsbot.Core/` | independente de plataforma: abstrações de câmera (`ICameraPlatform`, `ICameraSession`, `IExtensionUnit`), constantes da XU, comandos diretos, quadro `0xAA` + CRC-16/USB, pacote de firmware |
+| `src/Obsbot.Core/` | independente de plataforma: abstrações de câmera (`ICameraPlatform`, `ICameraSession`, `IExtensionUnit`), constantes da XU, comandos diretos, quadro `0xAA` + CRC-16/USB, tabelas de IDs do protocolo V1 e tipos de produto por PID, pacote de firmware |
 | `src/Obsbot.Devices/Windows/` | DirectShow (`ICreateDevEnum`, `IAMCameraControl`…) e Kernel Streaming (`IKsControl`, `IKsTopologyInfo`, `KSP_NODE`). Roda em uma thread MTA dedicada |
 | `src/Obsbot.Devices/Linux/` | V4L2 (`VIDIOC_*CTRL`), `UVCIOC_CTRL_QUERY`, enumeração por sysfs e parser de descritores USB para achar o `bUnitID` da XU |
 | `src/Obsbot.Osc/` | OSC 1.0 (UDP, TCP com prefixo de tamanho ou SLIP) e a ponte para o protocolo do OBSBOT Center |
@@ -88,5 +89,5 @@ Feche o OBSBOT Center (ou desligue o OSC nele) antes de iniciar o servidor, porq
 
 * **Nenhuma gravação de firmware.** Os seletores 1, 3, 4 e 5 da XU servem para upload de arquivos, **execução de shell no Linux da câmera** e atualização. O `xu-set` os recusa sem `--force`.
 * Os formatos de byte dos comandos diretos vêm do código da `libdev.dll`. **O significado de cada valor** (por exemplo, os modos de IA) segue o nome da função de origem e ainda precisa ser confirmado modelo a modelo.
-* As tabelas que convertem IDs lógicos em IDs de fio no protocolo `0xAA` foram recuperadas só em parte. Por isso o `msg-send` usa valores de fio, e 30 das 57 rotas OSC ainda não estão implementadas.
+* O protocolo `0xAA` tem duas versões. A V1, usada pela Tiny, foi recuperada e validada ao vivo movendo o gimbal por mensagem. A V3, dos modelos mais novos, não foi implementada. Por isso 5 das 57 rotas OSC não estão implementadas, todas com comandos que só existem na V3 (`SetGimWhiteBalanceShift`, `SetRBGain`, `SetZoneTrack`, `TriggerZonePreset`, `SetTrackingSpeed`). O `msg-send` continua recebendo valores de fio.
 * Testado ao vivo apenas com a **OBSBOT Tiny** (`VID_3564&PID_FEF0`) no Windows. **O backend Linux ainda não foi testado com a câmera.**

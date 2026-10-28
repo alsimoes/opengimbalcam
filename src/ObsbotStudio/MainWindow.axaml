@@ -112,9 +112,13 @@
             <TextBlock Grid.Column="1" Classes="hint" Text="{Binding PreviewInfo}" VerticalAlignment="Center" Margin="12,0" TextTrimming="CharacterEllipsis" />
             <ToggleSwitch Grid.Column="2" IsChecked="{Binding PreviewEnabled}" OnContent="Ligado" OffContent="Desligado" />
           </Grid>
-          <Border DockPanel.Dock="Top" Background="Black" CornerRadius="6" Height="320" Margin="0,4,0,12" ClipToBounds="True">
+          <Border DockPanel.Dock="Top" Background="Black" CornerRadius="6" Height="320" Margin="0,4,0,4" ClipToBounds="True">
             <Image Source="{Binding Frame}" Stretch="Uniform" />
           </Border>
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+            <Button Content="📷 Foto" Command="{Binding SnapshotCommand}" ToolTip.Tip="Salva o quadro atual em Imagens/OBSBOT Studio (OSC PCSnapshot)" />
+            <Button Content="{Binding RecordButtonText}" Command="{Binding ToggleRecordingCommand}" ToolTip.Tip="Grava AVI MJPEG em Vídeos/OBSBOT Studio (OSC SetPCRecording)" />
+          </StackPanel>
           <TextBlock DockPanel.Dock="Top" Classes="section" Text="Imagem (controles UVC)" />
           <ScrollViewer>
             <ItemsControl ItemsSource="{Binding Controls}">

@@ -1,3 +1,5 @@
+using Obsbot.Core.Protocol;
+
 namespace Obsbot.Osc.Bridge;
 
 /// <summary>UVC controls that OBSBOT Center's OSC protocol can change on webcams.</summary>
@@ -10,6 +12,9 @@ public enum UvcControl
     Saturation,
     Sharpness,
     Hue,
+    BacklightCompensation,
+    Gain,
+    PowerlineFrequency,
 }
 
 /// <summary>
@@ -21,7 +26,10 @@ public interface ICamera : IDisposable
 {
     string Name { get; }
 
-    /// <summary>Product code sent as the last DeviceInfo argument (see docs §10.4).</summary>
+    /// <summary>
+    /// libdev's ObsbotProductType (from the USB PID). Also the last DeviceInfo argument:
+    /// the TouchOSC samples open the Tiny page for 0, 1 and 6 (types of PIDs FEF0, FEF4, FEF3).
+    /// </summary>
     int ProductCode { get; }
 
     /// <summary>libdev cameraSetPanTiltRelative(pan, tilt): speeds in [-1, 1], 0 stops.</summary>
@@ -52,8 +60,20 @@ public interface ICamera : IDisposable
     /// <summary>Sets a control to a 0..100 % position of its UVC range.</summary>
     void SetPercent(UvcControl control, int percent);
 
-    /// <summary>Sets a control to a raw UVC value (e.g. white balance in kelvin).</summary>
+    /// <summary>Sets a control to a raw UVC value (e.g. white balance in kelvin), clamped to its range.</summary>
     void SetRaw(UvcControl control, int value);
+
+    /// <summary>Whether the control is in automatic mode; null when the camera does not have it.</summary>
+    bool? IsAuto(UvcControl control);
+
+    /// <summary>Manual exposure of 1/<paramref name="denominator"/> s, in the platform's UVC units.</summary>
+    void SetShutterSpeed(int denominator);
+
+    /// <summary>A direct command (XU selector 6) by its <see cref="Obsbot.Core.Camera.DirectCommands"/> name.</summary>
+    void SendCommand(string name, params int[] args);
+
+    /// <summary>A 0xAA message on XU selector 2 (protocol V1 only).</summary>
+    void SendMessage(RemoRequest request);
 }
 
 /// <summary>The cameras the bridge can address. OSC device indexes 0..3 index into this list.</summary>
@@ -63,4 +83,17 @@ public interface ICameraHub
 
     /// <summary>Re-enumerates devices (hot plug). Existing sessions may be disposed.</summary>
     void Refresh();
+}
+
+/// <summary>
+/// Video on the PC (OBSBOT Center does this in its media process, OBSBOT_Center.exe).
+/// Provided by the GUI, which has the camera's video open.
+/// </summary>
+public interface IPcMedia
+{
+    /// <summary>OSC PCSnapshot: saves the current frame of device <paramref name="device"/>.</summary>
+    void Snapshot(int device);
+
+    /// <summary>OSC SetPCRecording / SetHighfpsRecording.</summary>
+    void SetRecording(int device, bool on, bool highFps);
 }

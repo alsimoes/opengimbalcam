@@ -61,6 +61,7 @@ internal enum VideoProcAmpProperty
     WhiteBalance = 7,
     BacklightCompensation = 8,
     Gain = 9,
+    PowerlineFrequency = 13,
 }
 
 [ComImport, Guid("C6E13370-30AC-11D0-A18C-00A0C9118956"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

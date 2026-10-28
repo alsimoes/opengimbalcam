@@ -154,14 +154,61 @@ A libdev testa o modelo antes de escolher o caminho (função RVA `0xF550`, que 
 
 O CRC usa as tabelas "auchCRCHi/auchCRCLo" do Modbus (RVAs `0x1CBB50`/`0x1CBA50`) e inverte o resultado. Isso é exatamente o **CRC-16/USB**. Conferi as tabelas byte a byte, e o valor de verificação `"123456789"` → `0xB4C8` bate.
 
-### 6.3 Tabelas de IDs
+### 6.3 Tabelas de IDs e versões do protocolo
 
-A libdev guarda IDs lógicos (por exemplo remetente 3, destinatário 0x0B) e os converte em nibbles e IDs de fio com `std::map`s globais, montados em construtores estáticos. `tools/re/maps.py` recuperou parte deles:
+As funções `…R` da libdev montam na pilha uma requisição com IDs **lógicos** e chamam o despachante (RVA `0x8160`):
 
-* conjunto lógico → nibble: `{0:0, 1:1, 2:2, 3:3, 4:4, 5:8, 6:13}`;
-* sub-tabelas de comandos, por exemplo `{0:0x1CD, 1:0x3C4, 2:0x3C2, 3:0x3D2, 4:0x1D2}`.
+| Offset | Campo |
+|---|---|
+| `+0x0` | comprimento no fio (12 + payload) |
+| `+0x4` | tipo lógico (o despachante grava `r8 ^ 1`; as funções `…R` passam `r8 = 0`, logo tipo lógico 1 → tipo de fio 0) |
+| `+0x8` | sequência |
+| `+0xA` | remetente lógico (1 = câmera, 2 = gimbal, 3 = IA) |
+| `+0xC` | destinatário lógico, sempre `0x0B` |
+| `+0xE` / `+0x10` | id do comando / conjunto |
+| `+0x14` | versão do protocolo do aparelho (`[dev+0x1668]`) |
+| `+0x18` | transporte (`[dev+0x3C]`; 0 = UVC, que exige mensagens de até 60 bytes) |
+| `+0x1C` | payload |
 
-A tabela de dispositivos e várias sub-tabelas são montadas com código que o extrator ainda não segue. Por isso o `obsbotctl msg-send` recebe **valores de fio** (nibbles e id de 12 bits) e não nomes lógicos. Nas leituras ao vivo, a caixa de mensagens da Tiny estava vazia (60 bytes zero), o que é coerente com um modelo antigo que usa sobretudo o seletor 6.
+**Versão do protocolo.** `sub_167F10` converte o PID em `ObsbotProductType` (`[dev+0x680]`). A versão é 3 quando o tipo está na máscara `0x24D3F1C` ({2, 3, 4, 8, 9, 10, 11, 12, 13, 16, 18, 19, 22, 25}), senão 1. Nas mensagens V3 o despachante usa outro serializador (RVA `0x1001B0`) e outro finalizador (RVA `0xFF8D0`), com cabeçalho e tabelas diferentes, que não foram implementados.
+
+| PID | tipo | PID | tipo | PID | tipo |
+|---|---|---|---|---|---|
+| FEF0 (Tiny) | 0 | FEF8 | 2 | FF00 | 26 |
+| FEF1 | 7 | FEF9 | 3 | FF01 | 9 |
+| FEF2 | 5 | FEFA | 8 | FF02, FFFE | 18 |
+| FEF3 | 6 | FEFB | 10 | FF04 | 19 |
+| FEF4 | 1 | FEFC | 11 | FF06 | 25 |
+| FEF6 | 4 | FEFD | 16 | F001 | 22 |
+| FEF5, FEF7, FF03, FF05 | 26 | FEFE / FEFF | 13 / 12 | outros | 26 |
+
+Os exemplos TouchOSC abrem a página da Tiny para os códigos 0, 1 e 6, os tipos dos PIDs FEF0, FEF4 e FEF3. Por isso o `DeviceInfo` envia o tipo do produto como código.
+
+**Tabelas V1** (serializador RVA `0xFFF40`, `std::map`s montados em construtores estáticos):
+
+* dispositivo (`0x217F28`): `{0:0, 1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:8, 8:11, 9:12, 10:13, 11:14, 12:15}`; o destinatário `0x0B` vira 14;
+* conjunto (`0x217E28`): `{0:0, 1:1, 2:2, 3:3, 4:4, 5:8, 6:13}`;
+* comandos por conjunto (mapa de mapas em `0x217EF8`):
+  * set 1 (`0x217E58`): `{0:0x1CD, 1:0x3C4, 2:0x3C2, 3:0x3D2, 4:0x1D2}`;
+  * set 2 (`0x217F08`): `{0:0x01, 2:0x04, 3:0x06, 4:0x0A, 5:0x22, 6:0x23}`;
+  * set 3 (`0x217ED8`): `{0x00:0x23, 0x07:0x35, 0x08:0x36, 0x0A:0x3A, 0x0D:0x51, 0x0E:0x66, 0x0F:0x67, 0x10:0x90, 0x11:0x91, 0x13:0x92, 0x15:0x94, 0x5A:0x93, 0x64:0xEE}`;
+  * set 5 (`0x217EE8`): `{0:0x01, 3:0x10, 4:0x60, 5:0x61, 6:0x64, 7:0x65, 8:0x63, 9:0x66, 10:0x02, 11:0x69, 12:0x6A, 13:0x6B}`.
+
+O byte 3 leva `0x10 |` tipo de fio (lógico 0 → 2, 1 → 0, 2 → 1). O finalizador V1 só grava um CRC-8 no byte 8 quando o nibble alto da palavra dos bytes 1–2 é 2, o que nunca acontece em V1. Esse CRC-8 (`sub_1630F0`) usa uma tabela de polinômio `0x07` com uma entrada errada (`[0x47] = 0x0D` em vez de `0xD2`).
+
+Comandos fora dessas tabelas, como `aiSetZoneTrackStateR` (set 3 id `0x5D`), `aiTrgZonePresetR` (`0x1D`), `aiSetControlParaR` (`0x84`) e `cameraSetWhiteBalanceSetting` (set 1 id `0x0B`), não têm id V1. A libdev não consegue enviá-los à Tiny.
+
+[`RemoV1.cs`](../src/Obsbot.Core/Protocol/RemoV1.cs) reproduz as tabelas e as requisições usadas pelas rotas OSC:
+
+| Função libdev | Lógico (remetente, set, id) | Fio V1 | Payload V1 |
+|---|---|---|---|
+| `cameraSetDevRunStatusR` | 1, 1, 2 | `0x3C2` | `[1, estado]` (1 = acordar, 3 = dormir) |
+| `cameraSetFaceFocusR` | 1, 1, 3 | `0x3D2` | `[liga]` |
+| `gimbalSetSpeedPositionR` (tipos 0 e 1) | 2, 2, 3 | `0x006` | 6 × int16 LE de valor × 100 (truncado): velocidades roll/pitch/yaw, depois posições roll/pitch/yaw |
+| `aiSetTrackingModeR` | 3, 3, `0x11` | `0x091` | `[AiVerticalTrackType]` |
+| `aiSetTargetSelectR(true)` / `(false)` | 3, 3, `0x0F` / `0x0E` | `0x067` / `0x066` | `[0]` / vazio |
+
+**Validado ao vivo na Tiny** (2026-10-28, câmera transmitindo): `SetGimMotorDegree 30 20 0` levou o gimbal de (−20°, 3°) a **(20°, 0°)**. Isso confirma, de uma vez, as tabelas de dispositivo, conjunto e comando, o cabeçalho, o CRC e o payload. O pitch do gimbal tem sinal oposto ao tilt UVC: pitch +5 resulta em tilt −4.
 
 ## 7. O firmware `Obsbot_tiny_2P_OA_E_All_1.2.6.2_release.bin`
 
@@ -341,12 +388,47 @@ O `obsbotctl osc serve` e o painel OSC do `obsbot-studio` implementam o mesmo pr
 
 Das 57 rotas `/OBSBOT/WebCam/…` mapeadas:
 
-* **27 estão implementadas**: todas as que se resolvem com a XU (seletores 6 e 7) ou com controles UVC padrão.
-* **30 não estão**, porque dependem do canal `0xAA`, cujas tabelas de IDs não foram totalmente recuperadas (§6.3). O servidor registra essas mensagens no log com o motivo.
+* **52 estão implementadas**. O valor de cada uma segue o que o handler do OBSBOT_Main faz com ele, conforme a tabela abaixo.
+* **5 não estão**: `SetGimWhiteBalanceShift`, `SetRBGain`, `SetZoneTrack`, `TriggerZonePreset` e `SetTrackingSpeed`. Elas usam comandos que só existem no protocolo `0xAA` V3 (§6.3), cujo serializador não foi implementado. Na Tiny (V1), nem o OBSBOT Center consegue enviá-las. O servidor registra essas mensagens no log com o motivo.
 
 `obsbotctl osc routes` lista todas as rotas, com o RVA e a chamada de origem.
 
+Rotas acrescentadas depois da análise dos handlers e das tabelas estáticas do OBSBOT_Main:
+
+| Rota | O que o OBSBOT Center faz | Implementação |
+|---|---|---|
+| `SetAntiFlicker v` | só com exposição automática e `v` ≤ 2: `cameraSetAntiFlickR`, que na UVC é `PowerlineFrequency` | UVC `PowerlineFrequency` (0 = desligado, 1 = 50 Hz, 2 = 60 Hz) |
+| `SetAutoExposureMode v` | só com exposição automática: `cameraSetFaceAER(0/1)` | XU 6 cmd `03` |
+| `SetExposureCompensate v` | só com exposição automática: `v/10` = EV, procurado numa tabela de 19 passos de 1/3 EV (construtor RVA `0x8C600`) cujo índice vai para `cameraSetPAEEvBiasR` | UVC `BacklightCompensation` = round(3·EV) + 9 (a Tiny tem faixa 0..18, padrão 9) |
+| `SetHDR v` | `cameraSetWdrR`: XU 6 `01 01 (v≠0)`; mensagem V3 para os tipos 4/11/16/22 | XU 6 cmd `01` |
+| `SetISO v` | tabela `(i, i·100)`, i = 1..128 (RVA `0x8C910`), e `cameraSetMAEIsoR(i)`, que na UVC é `Gain` | UVC `Gain` = ISO/100. A Tiny ignora o valor com exposição automática |
+| `SetShutterSpeed v` | `v` = denominador (1/v s), tabela de 13 valores de 6400 a 2 (RVA `0x8CDD0`), e `cameraSetExposureAbsolute(…, manual)` | exposição manual: log2(1/v) no DirectShow, 10000/v no V4L2 |
+| `SetAutoFocusMode v` | `cameraSetFaceFocusR(v == 1)` | mensagem `0xAA` (§6.3) |
+| `WakeSleep v` | `cameraSetDevRunStatusR(v == 0 ? 3 : 1)` | mensagem `0xAA`; o estado volta no `DeviceInfo` |
+| `SetGimMotorDegree s p t` | (velocidade 0..90, pan ±129, pitch ±59) → `gimbalSetSpeedPositionR(0, pitch, pan, s, s, s)` | mensagem `0xAA` |
+| `SetGimMotorDegreeEx id s p t` | igual, com o aparelho identificado pelo número de série e valores float | o primeiro argumento texto usa o aparelho selecionado |
+| `SetPTZValue p t z` | `aiSetTargetSelectR(false)`; tempo = maior deslocamento/20 °/s (até 3 s); velocidades = deslocamento/tempo; zoom `1 + z/100` | mesmo cálculo, com a posição atual lida por UVC |
+| `Tiny/SetAiMode v` | tabela de saltos `0x117164`: 0 → (0,0), 1..5 → (2, 0..4), 6 → (5,0), 7 → (4,0), 8 → (3,0), 9 → (1,0); sequência própria nos tipos 18/19 | XU 6 cmd `16` (`ai-mode`) |
+| `Tiny/SetTrackingMode v` | 1 → 0, 2 → 2, 0 → 1 (só tipos 0/1): `aiSetTrackingModeR` | mensagem `0xAA` |
+| `Tiny/ToggleAILock v` | tipos 0/1: `aiSetTargetSelectR(v == 1)`; tipos 2/3/12/18/19: `cameraSetAiModeU` | conforme o tipo |
+| `Meet/SetVirtualBackground v` | 0: modo de mídia 0; 1/2/3: modo 1 + fundo `0x12`/`1`/`0x11` | XU 6 cmds `00` e `05` |
+| `Meet/SetAutoFraming v` | 0: modo 0; senão modo 2 + `cameraSetAutoFramingModeU` conforme o estado lido da câmera | modo 0 ou 2; o submodo atual é mantido |
+| `Meet/SetStandardMode` | `cameraSetMediaModeU(0)` | XU 6 cmd `00` |
+| `Get*Info` (Tiny e Meet) | lidos da interface do OBSBOT Center; respostas `AiTrackingInfo ,i`, `PresetPositionInfo ,isisis`, `VirtualBackgroundInfo ,i`, `AutoFramingInfo ,i` | estado guardado pela ponte (último valor enviado); presets com nomes genéricos |
+| `PCSnapshot`, `SetPCRecording`, `SetHighfpsRecording` | feitos pelo processo de mídia `OBSBOT_Center.exe` | no `obsbot-studio`: foto (JPEG) em Imagens/OBSBOT Studio e gravação AVI MJPEG em Vídeos/OBSBOT Studio, a partir do vídeo aberto. No `obsbotctl osc serve`, que não abre vídeo, só ficam registradas no log |
+
 **Validado ao vivo** (OBSBOT Tiny): `Connected`, `GetDeviceInfo`, `GetZoomInfo`, `GetGimbalPosInfo`, `SetGimbalUp 0` e `SetZoom 0` (estes dois sem efeito), por UDP, por TCP com prefixo de tamanho e por TCP com SLIP.
+
+Em 2026-10-28, com a câmera transmitindo, os valores foram conferidos por leitura UVC depois de cada comando:
+
+* `SetAntiFlicker 1` → `PowerlineFrequency` 1;
+* `SetExposureCompensate 0` → `BacklightCompensation` 9;
+* `SetShutterSpeed 100` → exposição −7, manual;
+* `SetISO 400`, com exposição manual → `Gain` 4;
+* `SetGimMotorDegree 30 20 0` → (20°, 0°);
+* `SetPTZValue -10 5 0` → (−10°, −4°).
+
+`SetHDR`, `SetAutoExposureMode`, `ToggleAILock 0`, `WakeSleep 1`, `SetAiMode 0` e `SetTrackingMode 1` foram aceitos sem erro, mas o efeito delas não pode ser lido por UVC. Depois do teste, os valores originais foram restaurados.
 
 **Teste de movimento real** (2026-10-28, com autorização do usuário e a câmera transmitindo vídeo):
 
@@ -367,7 +449,8 @@ O sinal de `PanRelative` é, portanto, o oposto do pan absoluto. O `ObsbotCamera
 **Pendências**
 
 * ~~Confirmar visualmente o sentido do pan~~: confirmado pelo usuário em 2026-10-28 com o vídeo no `obsbot-studio` (▶ gira para a direita).
-* O código de produto 0 para a Tiny é uma aproximação.
+* ~~O código de produto 0 para a Tiny é uma aproximação~~: o código é o `ObsbotProductType` do PID (§6.3).
+* `GetGimbalPosInfo` responde com pan/tilt UVC. O OBSBOT Center lê a atitude do gimbal (`gimbalGetAttitudeInfoR`), em que o pitch tem sinal oposto ao tilt.
 
 ## 11. Linux
 

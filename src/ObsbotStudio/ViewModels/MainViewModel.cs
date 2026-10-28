@@ -11,7 +11,7 @@ using Obsbot.Osc.Bridge;
 
 namespace ObsbotStudio.ViewModels;
 
-public sealed partial class MainViewModel : ObservableObject, IDisposable
+public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposable
 {
     private const int MaxLogLines = 500;
 
@@ -37,6 +37,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private string _previewInfo = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RecordButtonText))]
+    private bool _isRecording;
 
     [ObservableProperty]
     private CameraInfo? _selectedCamera;
@@ -96,6 +100,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public string PlatformName => _platform.Name;
 
     public string OscButtonText => OscRunning ? "Parar servidor OSC" : "Iniciar servidor OSC";
+
+    public string RecordButtonText => IsRecording ? "■ Parar" : "● Gravar";
 
     [RelayCommand]
     private void Refresh()
@@ -276,6 +282,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task StopPreviewAsync()
     {
         _previewGeneration++;
+        if (_preview?.StopRecording() is { } done)
+            AddLog($"gravação salva: {done.Path} ({done.Frames} quadros)");
+        IsRecording = false;
         var preview = _preview;
         _preview = null;
         Frame = null;
@@ -304,6 +313,67 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
+    private void Snapshot()
+    {
+        if (_preview is null)
+        {
+            Status = "Abra o vídeo para tirar uma foto.";
+            return;
+        }
+        if (Run(() => AddLog($"foto salva: {_preview.SaveSnapshot(MediaFolder(Environment.SpecialFolder.MyPictures))}")))
+            Status = "Foto salva.";
+    }
+
+    [RelayCommand]
+    private void ToggleRecording()
+    {
+        if (_preview is null)
+        {
+            Status = "Abra o vídeo para gravar.";
+            return;
+        }
+        if (IsRecording)
+        {
+            if (_preview.StopRecording() is { } done)
+                AddLog($"gravação salva: {done.Path} ({done.Frames} quadros)");
+            IsRecording = false;
+        }
+        else if (Run(() => AddLog($"gravando em {_preview.StartRecording(MediaFolder(Environment.SpecialFolder.MyVideos))}")))
+        {
+            IsRecording = true;
+        }
+    }
+
+    private static string MediaFolder(Environment.SpecialFolder folder)
+    {
+        string root = Environment.GetFolderPath(folder);
+        if (string.IsNullOrEmpty(root))
+            root = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(root, "OBSBOT Studio");
+    }
+
+    // OSC PCSnapshot / SetPCRecording: called from the server's threads; acts on the video shown here.
+    void IPcMedia.Snapshot(int device) => OnUiForDevice(device, Snapshot);
+
+    void IPcMedia.SetRecording(int device, bool on, bool highFps) => OnUiForDevice(device, () =>
+    {
+        if (on != IsRecording)
+            ToggleRecording();
+    });
+
+    private void OnUiForDevice(int device, Action action) => Dispatcher.UIThread.Post(() =>
+    {
+        var cams = _oscHub?.Cameras;
+        if (cams is null || device < 0 || device >= cams.Count
+            || cams[device] is not ObsbotCamera c || c.Info.Path != SelectedCamera?.Path)
+        {
+            AddLog($"OSC: foto/gravação só para a câmera mostrada no vídeo (pedido para o índice {device})");
+            return;
+        }
+        action();
+    });
+
+    [RelayCommand]
     private async Task ToggleOscAsync()
     {
         if (OscRunning)
@@ -322,7 +392,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             _oscHub = new ObsbotCameraHub(_platform);
-            var bridge = new OscBridge(_oscHub, AddLog);
+            var bridge = new OscBridge(_oscHub, AddLog, this);
             var endPoint = new IPEndPoint(IPAddress.Any, port);
             if (OscUdp)
                 _oscServers.Add(new OscServer(OscTransport.Udp, endPoint, bridge.HandleAsync, AddLog));

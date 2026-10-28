@@ -16,4 +16,9 @@
     <ProjectReference Include="..\..\src\Obsbot.Osc\Obsbot.Osc.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The GUI project needs Avalonia; its file writer has no dependencies and is tested on its own. -->
+    <Compile Include="..\..\src\ObsbotStudio\MjpegAviWriter.cs" Link="Linked\MjpegAviWriter.cs" />
+  </ItemGroup>
+
 </Project>
