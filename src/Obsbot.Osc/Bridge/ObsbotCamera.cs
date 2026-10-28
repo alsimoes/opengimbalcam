@@ -25,9 +25,8 @@ public sealed class ObsbotCamera : ICamera
 
     public string Name => Info.Name;
 
-    public int ProductCode => ObsbotProduct.TypeFromPid(Info.ProductId);
-
-    public RemoProtocol Protocol => ObsbotProduct.Protocol(ProductCode);
+    /// <summary>libdev's ObsbotProductType of the Tiny (PID FEF0), the only model this project targets.</summary>
+    public int ProductCode => 0;
 
     /// <summary>The underlying session, opened on first use.</summary>
     public ICameraSession Session => _session ??= _platform.Open(Info);
@@ -153,8 +152,6 @@ public sealed class ObsbotCamera : ICamera
 
     public void SendMessage(RemoRequest request)
     {
-        if (Protocol != RemoProtocol.V1)
-            throw new NotSupportedException($"{Name}: o protocolo 0xAA V3 (tipo de produto {ProductCode}) não está implementado.");
         var frame = RemoV1.ToWire(request, unchecked(_sequence++)).Encode();
         Xu.Set((uint)ObsbotXu.Selector.Message, frame);
     }

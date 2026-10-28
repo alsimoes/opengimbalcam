@@ -178,11 +178,15 @@ public class BridgeTests
     }
 
     [Fact]
-    public async Task OnlyV3CommandsRemainUnimplemented()
+    public async Task OnlyRoutesWithoutEffectOnTheTinyRemainUnimplemented()
     {
         var (bridge, _) = Make();
         string[] missing = bridge.Routes.Where(r => r.Handler is null).Select(r => r.Address[OscBridge.Prefix.Length..]).Order().ToArray();
-        Assert.Equal(["General/SetGimWhiteBalanceShift", "General/SetRBGain", "General/SetZoneTrack", "General/TriggerZonePreset", "Tiny/SetTrackingSpeed"], missing);
+        Assert.Equal(
+            ["General/SetAutoFocusMode", "General/SetGimWhiteBalanceShift", "General/SetRBGain", "General/SetZoneTrack", "General/TriggerZonePreset",
+             "Meet/GetAutoFramingInfo", "Meet/GetPresetPositionInfo", "Meet/GetVirtualBackgroundInfo", "Meet/SetAutoFraming", "Meet/SetStandardMode",
+             "Meet/SetVirtualBackground", "Tiny/SetTrackingSpeed"],
+            missing);
         await Task.CompletedTask;
     }
 
@@ -194,7 +198,6 @@ public class BridgeTests
     [InlineData("SetISO", 400, "raw Gain 4")]
     [InlineData("SetShutterSpeed", 100, "shutter 100")]
     [InlineData("WakeSleep", 0, "cameraSetDevRunStatusR: sender=1 set=1 id=0x02 payload=0103")]
-    [InlineData("SetAutoFocusMode", 1, "cameraSetFaceFocusR: sender=1 set=1 id=0x03 payload=01")]
     public async Task GeneralRoutesReachTheCamera(string route, int value, string call)
     {
         var (bridge, hub) = Make();
@@ -252,17 +255,6 @@ public class BridgeTests
         await bridge.ExecuteAsync(new OscMessage(G + "WakeSleep", 0));
         var info = await bridge.ExecuteAsync(new OscMessage(G + "GetDeviceInfo", 0));
         Assert.Equal(0, info!.Args[9]);
-    }
-
-    [Fact]
-    public async Task MeetInfoRepliesEchoTheLastValue()
-    {
-        var (bridge, hub) = Make();
-        await bridge.ExecuteAsync(new OscMessage(OscBridge.Prefix + "Meet/SetVirtualBackground", 3));
-        Assert.Equal(["cmd media-mode 1", "cmd bg-mode 17"], hub.Cams[0].Calls);
-        var reply = await bridge.ExecuteAsync(new OscMessage(OscBridge.Prefix + "Meet/GetVirtualBackgroundInfo", 0));
-        Assert.Equal(OscBridge.Prefix + "Meet/VirtualBackgroundInfo", reply!.Address);
-        Assert.Equal([3], reply.Args);
     }
 
     [Fact]
@@ -384,7 +376,7 @@ internal sealed class FakeCamera(string name) : ICamera
     public List<string> Calls { get; } = [];
     public int Zoom { get; set; }
     public string Name => name;
-    public int ProductCode { get; set; }
+    public int ProductCode => 0;
     public bool AutoExposure { get; set; } = true;
 
     public void SetPanTiltSpeed(double pan, double tilt) => Calls.Add($"pantilt {pan:0.##} {tilt:0.##}");

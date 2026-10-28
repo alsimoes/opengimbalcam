@@ -170,7 +170,7 @@ As funções `…R` da libdev montam na pilha uma requisição com IDs **lógico
 | `+0x18` | transporte (`[dev+0x3C]`; 0 = UVC, que exige mensagens de até 60 bytes) |
 | `+0x1C` | payload |
 
-**Versão do protocolo.** `sub_167F10` converte o PID em `ObsbotProductType` (`[dev+0x680]`). A versão é 3 quando o tipo está na máscara `0x24D3F1C` ({2, 3, 4, 8, 9, 10, 11, 12, 13, 16, 18, 19, 22, 25}), senão 1. Nas mensagens V3 o despachante usa outro serializador (RVA `0x1001B0`) e outro finalizador (RVA `0xFF8D0`), com cabeçalho e tabelas diferentes, que não foram implementados.
+**Versão do protocolo.** `sub_167F10` converte o PID em `ObsbotProductType` (`[dev+0x680]`). A versão é 3 quando o tipo está na máscara `0x24D3F1C` ({2, 3, 4, 8, 9, 10, 11, 12, 13, 16, 18, 19, 22, 25}), senão 1. Nas mensagens V3 o despachante usa outro serializador (RVA `0x1001B0`) e outro finalizador (RVA `0xFF8D0`), com cabeçalho e tabelas diferentes. Como o projeto atende só à Tiny (V1), a V3 fica fora do escopo; a tabela abaixo serve de registro.
 
 | PID | tipo | PID | tipo | PID | tipo |
 |---|---|---|---|---|---|
@@ -182,7 +182,7 @@ As funções `…R` da libdev montam na pilha uma requisição com IDs **lógico
 | FEF6 | 4 | FEFD | 16 | F001 | 22 |
 | FEF5, FEF7, FF03, FF05 | 26 | FEFE / FEFF | 13 / 12 | outros | 26 |
 
-Os exemplos TouchOSC abrem a página da Tiny para os códigos 0, 1 e 6, os tipos dos PIDs FEF0, FEF4 e FEF3. Por isso o `DeviceInfo` envia o tipo do produto como código.
+Os exemplos TouchOSC abrem a página da Tiny para os códigos 0, 1 e 6, os tipos dos PIDs FEF0, FEF4 e FEF3. Por isso o `DeviceInfo` envia 0, o tipo da Tiny.
 
 **Tabelas V1** (serializador RVA `0xFFF40`, `std::map`s montados em construtores estáticos):
 
@@ -203,8 +203,7 @@ Comandos fora dessas tabelas, como `aiSetZoneTrackStateR` (set 3 id `0x5D`), `ai
 | Função libdev | Lógico (remetente, set, id) | Fio V1 | Payload V1 |
 |---|---|---|---|
 | `cameraSetDevRunStatusR` | 1, 1, 2 | `0x3C2` | `[1, estado]` (1 = acordar, 3 = dormir) |
-| `cameraSetFaceFocusR` | 1, 1, 3 | `0x3D2` | `[liga]` |
-| `gimbalSetSpeedPositionR` (tipos 0 e 1) | 2, 2, 3 | `0x006` | 6 × int16 LE de valor × 100 (truncado): velocidades roll/pitch/yaw, depois posições roll/pitch/yaw |
+| `gimbalSetSpeedPositionR` | 2, 2, 3 | `0x006` | 6 × int16 LE de valor × 100 (truncado): velocidades roll/pitch/yaw, depois posições roll/pitch/yaw |
 | `aiSetTrackingModeR` | 3, 3, `0x11` | `0x091` | `[AiVerticalTrackType]` |
 | `aiSetTargetSelectR(true)` / `(false)` | 3, 3, `0x0F` / `0x0E` | `0x067` / `0x066` | `[0]` / vazio |
 
@@ -388,8 +387,13 @@ O `obsbotctl osc serve` e o painel OSC do `obsbot-studio` implementam o mesmo pr
 
 Das 57 rotas `/OBSBOT/WebCam/…` mapeadas:
 
-* **52 estão implementadas**. O valor de cada uma segue o que o handler do OBSBOT_Main faz com ele, conforme a tabela abaixo.
-* **5 não estão**: `SetGimWhiteBalanceShift`, `SetRBGain`, `SetZoneTrack`, `TriggerZonePreset` e `SetTrackingSpeed`. Elas usam comandos que só existem no protocolo `0xAA` V3 (§6.3), cujo serializador não foi implementado. Na Tiny (V1), nem o OBSBOT Center consegue enviá-las. O servidor registra essas mensagens no log com o motivo.
+O projeto atende só à **OBSBOT Tiny** (PID `FEF0`, tipo de produto 0, protocolo V1). Os ramos que o OBSBOT_Main tem para outros modelos não foram reproduzidos.
+
+* **45 estão implementadas**. O valor de cada uma segue o que o handler do OBSBOT_Main faz com ele na Tiny, conforme a tabela abaixo.
+* **12 não têm efeito na Tiny** e só ficam registradas no log, com o motivo:
+  * as 6 rotas `Meet/…`;
+  * `SetAutoFocusMode`, porque a Tiny tem foco fixo e não expõe controle UVC de foco;
+  * `SetGimWhiteBalanceShift`, `SetRBGain`, `SetZoneTrack`, `TriggerZonePreset` e `SetTrackingSpeed`, que usam comandos que só existem no protocolo `0xAA` V3 (§6.3). Para a Tiny, nem o OBSBOT Center consegue enviá-las.
 
 `obsbotctl osc routes` lista todas as rotas, com o RVA e a chamada de origem.
 
@@ -403,18 +407,14 @@ Rotas acrescentadas depois da análise dos handlers e das tabelas estáticas do 
 | `SetHDR v` | `cameraSetWdrR`: XU 6 `01 01 (v≠0)`; mensagem V3 para os tipos 4/11/16/22 | XU 6 cmd `01` |
 | `SetISO v` | tabela `(i, i·100)`, i = 1..128 (RVA `0x8C910`), e `cameraSetMAEIsoR(i)`, que na UVC é `Gain` | UVC `Gain` = ISO/100. A Tiny ignora o valor com exposição automática |
 | `SetShutterSpeed v` | `v` = denominador (1/v s), tabela de 13 valores de 6400 a 2 (RVA `0x8CDD0`), e `cameraSetExposureAbsolute(…, manual)` | exposição manual: log2(1/v) no DirectShow, 10000/v no V4L2 |
-| `SetAutoFocusMode v` | `cameraSetFaceFocusR(v == 1)` | mensagem `0xAA` (§6.3) |
 | `WakeSleep v` | `cameraSetDevRunStatusR(v == 0 ? 3 : 1)` | mensagem `0xAA`; o estado volta no `DeviceInfo` |
 | `SetGimMotorDegree s p t` | (velocidade 0..90, pan ±129, pitch ±59) → `gimbalSetSpeedPositionR(0, pitch, pan, s, s, s)` | mensagem `0xAA` |
 | `SetGimMotorDegreeEx id s p t` | igual, com o aparelho identificado pelo número de série e valores float | o primeiro argumento texto usa o aparelho selecionado |
 | `SetPTZValue p t z` | `aiSetTargetSelectR(false)`; tempo = maior deslocamento/20 °/s (até 3 s); velocidades = deslocamento/tempo; zoom `1 + z/100` | mesmo cálculo, com a posição atual lida por UVC |
-| `Tiny/SetAiMode v` | tabela de saltos `0x117164`: 0 → (0,0), 1..5 → (2, 0..4), 6 → (5,0), 7 → (4,0), 8 → (3,0), 9 → (1,0); sequência própria nos tipos 18/19 | XU 6 cmd `16` (`ai-mode`) |
-| `Tiny/SetTrackingMode v` | 1 → 0, 2 → 2, 0 → 1 (só tipos 0/1): `aiSetTrackingModeR` | mensagem `0xAA` |
-| `Tiny/ToggleAILock v` | tipos 0/1: `aiSetTargetSelectR(v == 1)`; tipos 2/3/12/18/19: `cameraSetAiModeU` | conforme o tipo |
-| `Meet/SetVirtualBackground v` | 0: modo de mídia 0; 1/2/3: modo 1 + fundo `0x12`/`1`/`0x11` | XU 6 cmds `00` e `05` |
-| `Meet/SetAutoFraming v` | 0: modo 0; senão modo 2 + `cameraSetAutoFramingModeU` conforme o estado lido da câmera | modo 0 ou 2; o submodo atual é mantido |
-| `Meet/SetStandardMode` | `cameraSetMediaModeU(0)` | XU 6 cmd `00` |
-| `Get*Info` (Tiny e Meet) | lidos da interface do OBSBOT Center; respostas `AiTrackingInfo ,i`, `PresetPositionInfo ,isisis`, `VirtualBackgroundInfo ,i`, `AutoFramingInfo ,i` | estado guardado pela ponte (último valor enviado); presets com nomes genéricos |
+| `Tiny/SetAiMode v` | tabela de saltos `0x117164`: 0 → (0,0), 1..5 → (2, 0..4), 6 → (5,0), 7 → (4,0), 8 → (3,0), 9 → (1,0) | XU 6 cmd `16` (`ai-mode`) |
+| `Tiny/SetTrackingMode v` | 1 → 0, 2 → 2, 0 → 1: `aiSetTrackingModeR` | mensagem `0xAA` |
+| `Tiny/ToggleAILock v` | `aiSetTargetSelectR(v == 1)` | mensagem `0xAA` |
+| `Tiny/Get*Info` | lidos da interface do OBSBOT Center; respostas `AiTrackingInfo ,i` e `PresetPositionInfo ,isisis` | estado guardado pela ponte (último valor enviado); presets com nomes genéricos |
 | `PCSnapshot`, `SetPCRecording`, `SetHighfpsRecording` | feitos pelo processo de mídia `OBSBOT_Center.exe` | no `obsbot-studio`: foto (JPEG) em Imagens/OBSBOT Studio e gravação AVI MJPEG em Vídeos/OBSBOT Studio, a partir do vídeo aberto. No `obsbotctl osc serve`, que não abre vídeo, só ficam registradas no log |
 
 **Validado ao vivo** (OBSBOT Tiny): `Connected`, `GetDeviceInfo`, `GetZoomInfo`, `GetGimbalPosInfo`, `SetGimbalUp 0` e `SetZoom 0` (estes dois sem efeito), por UDP, por TCP com prefixo de tamanho e por TCP com SLIP.
@@ -449,7 +449,7 @@ O sinal de `PanRelative` é, portanto, o oposto do pan absoluto. O `ObsbotCamera
 **Pendências**
 
 * ~~Confirmar visualmente o sentido do pan~~: confirmado pelo usuário em 2026-10-28 com o vídeo no `obsbot-studio` (▶ gira para a direita).
-* ~~O código de produto 0 para a Tiny é uma aproximação~~: o código é o `ObsbotProductType` do PID (§6.3).
+* ~~O código de produto 0 para a Tiny é uma aproximação~~: 0 é o `ObsbotProductType` da Tiny (§6.3).
 * `GetGimbalPosInfo` responde com pan/tilt UVC. O OBSBOT Center lê a atitude do gimbal (`gimbalGetAttitudeInfoR`), em que o pitch tem sinal oposto ao tilt.
 
 ## 11. Linux

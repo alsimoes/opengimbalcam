@@ -27,8 +27,8 @@ public interface ICamera : IDisposable
     string Name { get; }
 
     /// <summary>
-    /// libdev's ObsbotProductType (from the USB PID). Also the last DeviceInfo argument:
-    /// the TouchOSC samples open the Tiny page for 0, 1 and 6 (types of PIDs FEF0, FEF4, FEF3).
+    /// libdev's ObsbotProductType, sent as the last DeviceInfo argument (0 = Tiny;
+    /// the TouchOSC samples open the Tiny page for it).
     /// </summary>
     int ProductCode { get; }
 
@@ -72,7 +72,7 @@ public interface ICamera : IDisposable
     /// <summary>A direct command (XU selector 6) by its <see cref="Obsbot.Core.Camera.DirectCommands"/> name.</summary>
     void SendCommand(string name, params int[] args);
 
-    /// <summary>A 0xAA message on XU selector 2 (protocol V1 only).</summary>
+    /// <summary>A 0xAA message on XU selector 2, in the Tiny's protocol V1.</summary>
     void SendMessage(RemoRequest request);
 }
 

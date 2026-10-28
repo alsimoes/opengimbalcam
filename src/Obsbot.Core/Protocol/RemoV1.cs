@@ -73,9 +73,6 @@ public static class RemoV1
     /// <summary>cameraSetDevRunStatusR (RVA 0x2E040), V1 payload [1, status]. OSC WakeSleep: 0 -> 3 (sleep), other -> 1 (run).</summary>
     public static RemoRequest DevRunStatus(byte status) => new(1, 1, 2, [1, status], "cameraSetDevRunStatusR");
 
-    /// <summary>cameraSetFaceFocusR (RVA 0x2F2A0).</summary>
-    public static RemoRequest FaceFocus(bool on) => new(1, 1, 3, [on ? (byte)1 : (byte)0], "cameraSetFaceFocusR");
-
     /// <summary>aiSetTrackingModeR (RVA 0x1AC00): one AiVerticalTrackType byte.</summary>
     public static RemoRequest TrackingMode(byte verticalTrackType) => new(3, 3, 0x11, [verticalTrackType], "aiSetTrackingModeR");
 
@@ -84,7 +81,7 @@ public static class RemoV1
         select ? new(3, 3, 0x0F, [0], "aiSetTargetSelectR") : new(3, 3, 0x0E, [], "aiSetTargetSelectR");
 
     /// <summary>
-    /// gimbalSetSpeedPositionR (RVA 0x104480) for product types 0 and 1 (id 3 of set 2): six int16 LE
+    /// gimbalSetSpeedPositionR (RVA 0x104480), as sent to the Tiny (id 3 of set 2): six int16 LE
     /// of value * 100, speeds first (roll, pitch, yaw in °/s) then positions (roll, pitch, yaw in °).
     /// </summary>
     public static RemoRequest GimbalSpeedPosition(double roll, double pitch, double yaw, double rollSpeed, double pitchSpeed, double yawSpeed)

@@ -1,6 +1,6 @@
 # oss-obsbot-driver
 
-Uma alternativa aberta ao OBSBOT Center para controlar câmeras OBSBOT no **Windows e no Linux**. Ela foi construída a partir da engenharia reversa do software e do firmware oficiais.
+Uma alternativa aberta ao OBSBOT Center para controlar a **OBSBOT Tiny** (PID `FEF0`) no **Windows e no Linux**. Recursos que só existem em modelos mais novos estão fora do escopo. Ela foi construída a partir da engenharia reversa do software e do firmware oficiais.
 
 > As câmeras OBSBOT **não usam driver de kernel próprio**. Elas são UVC padrão. O OBSBOT Center fala com a câmera em modo usuário, pela **UVC Extension Unit** `{9A1E7291-6843-4683-6D92-39BC7906EE49}`, por meio do DirectShow/Kernel Streaming. Este projeto faz o mesmo no Windows e usa V4L2 + `UVCIOC_CTRL_QUERY` (driver `uvcvideo`) no Linux.
 
@@ -61,7 +61,7 @@ Com várias câmeras conectadas, use `-d <índice>` (veja `list`).
 
 ### Servidor OSC
 
-O comando reimplementa o "OBSBOT OSC Protocol" do OBSBOT Center (`/OBSBOT/WebCam/…`, porta 16284): 52 das 57 rotas, incluindo exposição, ISO, obturador, anti-flicker, HDR, modos de IA e posicionamento absoluto do gimbal pelo canal `0xAA`. Com ele, TouchOSC, Bitfocus Companion e plugins de Stream Deck controlam a câmera sem o OBSBOT Center:
+O comando reimplementa o "OBSBOT OSC Protocol" do OBSBOT Center (`/OBSBOT/WebCam/…`, porta 16284): as 45 rotas que se aplicam à Tiny, incluindo exposição, ISO, obturador, anti-flicker, HDR, modos de IA e posicionamento absoluto do gimbal pelo canal `0xAA`. Com ele, TouchOSC, Bitfocus Companion e plugins de Stream Deck controlam a câmera sem o OBSBOT Center:
 
 ```
 obsbotctl osc serve [--udp] [--tcp] [--port 16284] [--bind 0.0.0.0] [--reply-port N] [-q]
@@ -89,5 +89,5 @@ Feche o OBSBOT Center (ou desligue o OSC nele) antes de iniciar o servidor, porq
 
 * **Nenhuma gravação de firmware.** Os seletores 1, 3, 4 e 5 da XU servem para upload de arquivos, **execução de shell no Linux da câmera** e atualização. O `xu-set` os recusa sem `--force`.
 * Os formatos de byte dos comandos diretos vêm do código da `libdev.dll`. **O significado de cada valor** (por exemplo, os modos de IA) segue o nome da função de origem e ainda precisa ser confirmado modelo a modelo.
-* O protocolo `0xAA` tem duas versões. A V1, usada pela Tiny, foi recuperada e validada ao vivo movendo o gimbal por mensagem. A V3, dos modelos mais novos, não foi implementada. Por isso 5 das 57 rotas OSC não estão implementadas, todas com comandos que só existem na V3 (`SetGimWhiteBalanceShift`, `SetRBGain`, `SetZoneTrack`, `TriggerZonePreset`, `SetTrackingSpeed`). O `msg-send` continua recebendo valores de fio.
+* O protocolo `0xAA` da Tiny (V1) foi recuperado e validado ao vivo movendo o gimbal por mensagem. A versão V3, dos modelos mais novos, está fora do escopo. 12 das 57 rotas OSC não têm efeito na Tiny e só ficam registradas no log: as 6 da Meet, `SetAutoFocusMode` (a Tiny tem foco fixo) e 5 com comandos que só existem na V3. O `msg-send` continua recebendo valores de fio.
 * Testado ao vivo apenas com a **OBSBOT Tiny** (`VID_3564&PID_FEF0`) no Windows. **O backend Linux ainda não foi testado com a câmera.**

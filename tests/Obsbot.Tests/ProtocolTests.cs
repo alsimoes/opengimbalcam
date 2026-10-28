@@ -112,18 +112,6 @@ public class ProtocolTests
         Assert.Throws<NotSupportedException>(() => RemoV1.ToWire(zoneTrack, 1));
     }
 
-    [Theory]
-    [InlineData(0xFEF0, 0, RemoProtocol.V1)]
-    [InlineData(0xFEF4, 1, RemoProtocol.V1)]
-    [InlineData(0xFEF8, 2, RemoProtocol.V3)]
-    [InlineData(0xFF06, 25, RemoProtocol.V3)]
-    [InlineData(0x1234, 26, RemoProtocol.V1)]
-    public void Product_type_and_protocol_follow_the_pid(int pid, int type, RemoProtocol protocol)
-    {
-        Assert.Equal(type, ObsbotProduct.TypeFromPid(pid));
-        Assert.Equal(protocol, ObsbotProduct.Protocol(type));
-    }
-
     [Fact]
     public void Hdr_is_direct_command_01()
     {
