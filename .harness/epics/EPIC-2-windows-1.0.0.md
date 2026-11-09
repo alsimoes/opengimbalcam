@@ -22,18 +22,108 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 ## Tarefas
 
 - [x] [T2] Restringir driver, CLI, ponte OSC e app ao PID FEF0 (ADR-0007), com testes (`TinyIdentity`, 12 casos de teste; 2026-11-09).
-- [ ] [HT + T2] Validar foto e gravação do `opengimbalcam-studio` com a câmera.
-- [ ] [HT] Confirmar visualmente os comandos ⚠️ (HDR, modo de exposição, modos de IA, trava de IA, suspensão).
+- [ ] [HT] Validar o Studio (vídeo, "Sobre", foto, gravação) e confirmar visualmente os comandos ⚠️ (HDR, exposição, modos de IA, trava de IA, rastreamento, suspensão). HT: aguardando, entregue em 2026-11-09. Guia: [HT-2.1](#ht-21-validar-a-câmera-no-windows).
+- [ ] [HT] Escolher a licença do projeto; o ADR e o `LICENSE` ficam com o T3. HT: aguardando, entregue em 2026-11-09. Guia: [HT-2.2](#ht-22-escolher-a-licença).
 - [ ] [T3] `GetGimbalPosInfo`: decidir entre pan/tilt UVC e atitude do gimbal.
 - [ ] [T3, decisão HT] Definir o formato de distribuição no Windows (zip autocontido ou instalador) por ADR.
 - [x] [T1] Versionar os projetos (`0.x` até a release, depois `1.0.0`): `0.9.0` em `Directory.Build.props`, `ogcctl --version`. Feito pelo mesmo agente T2, por economia.
-- [x] [T2] Tela "Sobre" no `opengimbalcam-studio` com o aviso de marcas (falta conferir visualmente, na tarefa HT de validação).
+- [x] [T2] Tela "Sobre" no `opengimbalcam-studio` com o aviso de marcas. A conferência visual fica no item A1 da [HT-2.1](#ht-21-validar-a-câmera-no-windows).
 - [ ] [T3, decisão HT] Avaliar a migração do Avalonia 11.3 para a 12.x (vinda do Épico 1).
 
 ## Achados
 
 * **Sem arquivo LICENSE.** O repositório é público desde 2026-11-09, mas não tem licença; sem ela, ninguém pode reutilizar o código legalmente. A tela "Sobre" omite a linha de licença até isso ser decidido. Decisão do mantenedor (HT), por ADR.
 * A filtragem por PID acontece na enumeração das duas plataformas, então a ponte OSC e o Studio herdam a restrição sem código próprio.
+
+## Tarefas HT
+
+### HT-2.1: Validar a câmera no Windows
+
+* **Épico:** este · **Tier:** HT · **Status:** aguardando
+* **Delegada em:** 2026-11-09 · **Bloqueia:** a coluna Windows da matriz de validação (1.0.0)
+* **Tempo estimado:** 30 min
+
+#### Objetivo
+
+Confirmar com a câmera que o Studio funciona (vídeo, "Sobre", foto, gravação) e qual é o efeito visível dos comandos hoje marcados ⚠️.
+
+#### Por que é HT
+
+Exige observação visual e escrita em hardware. Executar estes passos é a autorização do mantenedor para essas escritas ([governança](../governance.md), regra de segurança 2).
+
+#### Antes de começar
+
+Tiny conectada. Na pasta do projeto, com o PR #5 já no `master`:
+
+```
+git switch master && git pull && dotnet build OpenGimbalCam.slnx -c Release
+```
+
+#### Passos
+
+**Parte A: Studio.** Abra `src\OpenGimbalCam.Studio\bin\Release\net10.0\opengimbalcam-studio.exe`.
+
+1. **A1.** O vídeo aparece? Clique em **Sobre** e confira se a janela mostra a versão 0.9.0 e o aviso de marcas.
+2. **A2.** Clique em **📷 Foto** e abra o arquivo salvo em *Imagens\OpenGimbalCam Studio*.
+3. **A3.** Clique em **Gravar**, espere uns 10 s, clique de novo e assista ao `.avi` salvo em *Vídeos\OpenGimbalCam Studio*.
+4. Feche o Studio.
+
+**Parte B: comandos ⚠️.** Abra dois terminais em `src\OpenGimbalCam.Cli\bin\Release\net10.0`.
+
+* No terminal 1, deixe rodando `.\ogcctl.exe osc serve --udp`. Mantenha o vídeo aberto no app Câmera do Windows, porque a câmera só reage enquanto transmite.
+* No terminal 2, rode um comando por vez. Nos comandos abaixo, `...` significa `.\ogcctl.exe osc send 127.0.0.1`.
+
+| # | Comando (terminal 2) | O que observar |
+|---|---|---|
+| B1 | `... /OBSBOT/WebCam/General/SetHDR 1` e depois `0` | a imagem muda de contraste ou de luz? |
+| B2 | `... /OBSBOT/WebCam/General/SetAutoExposureMode 1` e depois `0` | a exposição passa a priorizar o rosto? |
+| B3 | `... /OBSBOT/WebCam/Tiny/SetAiMode 1`, `2`, `3` e por fim `0` | o que cada valor faz (segue o corpo, fecha no rosto, para)? |
+| B4 | `... /OBSBOT/WebCam/Tiny/ToggleAILock 1` e depois `0` | o rastreamento trava num alvo e solta? |
+| B5 | `... /OBSBOT/WebCam/Tiny/SetTrackingMode 0`, `1` e `2` | o comportamento do rastreamento muda? |
+| B6 | `... /OBSBOT/WebCam/General/WakeSleep 0` e depois `1` | a câmera dorme (abaixa o gimbal) e acorda? |
+
+No fim, rode `SetAiMode 0` e `SetHDR 0` para deixar a câmera como estava.
+
+#### Como interpretar
+
+"Funcionou", "nada aconteceu" e "aconteceu outra coisa" são todos resultados úteis. Não é preciso entender o protocolo.
+
+#### Entregável
+
+Uma linha por item (A1 a A3, B1 a B6), na conversa com o orquestrador. Ele atualiza a matriz de validação e os achados.
+
+#### Critério de aceite
+
+- [ ] Todos os itens A1 a A3 e B1 a B6 com resultado anotado.
+
+### HT-2.2: Escolher a licença
+
+* **Épico:** este · **Tier:** HT (decisão do mantenedor) · **Status:** aguardando
+* **Delegada em:** 2026-11-09 · **Bloqueia:** a 1.0.0 e a linha de licença na tela "Sobre"
+* **Tempo estimado:** 5 min
+
+#### Objetivo
+
+Definir a licença de código aberto do projeto.
+
+#### Por que é HT
+
+É uma decisão do mantenedor com efeito jurídico ([tiers](../tiers.md), item 5).
+
+#### Passos
+
+1. Escolha uma das opções:
+   * **MIT:** permissiva e simples, padrão no ecossistema .NET.
+   * **Apache-2.0:** permissiva, com proteção explícita contra disputas de patente.
+   * **GPL-3.0 ou LGPL-3.0:** quem distribuir versões modificadas precisa abrir o código delas.
+
+#### Entregável
+
+O nome da licença, na conversa. O T3 escreve o ADR, cria o `LICENSE` e liga a linha de licença na tela "Sobre".
+
+#### Critério de aceite
+
+- [ ] Licença escolhida e registrada em ADR aceito.
 
 ## Resultado
 
