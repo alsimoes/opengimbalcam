@@ -24,5 +24,7 @@ public partial class MainWindow : Window
         Deactivated += (_, _) => Vm?.StopMove();
     }
 
+    private async void OnAbout(object? sender, RoutedEventArgs e) => await new AboutWindow().ShowDialog(this);
+
     private MainViewModel? Vm => DataContext as MainViewModel;
 }

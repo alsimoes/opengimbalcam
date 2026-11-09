@@ -212,7 +212,7 @@ public sealed class ObsbotCameraHub : ICameraHub, IDisposable
     public void Refresh()
     {
         Dispose();
-        _cameras = _platform.Enumerate().Where(d => d.IsObsbot).Take(MaxDevices).Select(d => new ObsbotCamera(_platform, d)).ToList();
+        _cameras = _platform.Enumerate().Where(d => d.IsSupportedTiny).Take(MaxDevices).Select(d => new ObsbotCamera(_platform, d)).ToList();
     }
 
     public void Dispose()

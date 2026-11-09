@@ -30,12 +30,17 @@ public sealed class V4l2Platform : ICameraPlatform
             if (ReadSys(Path.Combine(dir, "index")) is { } idx && idx != "0")
                 continue;
             var usb = UsbDeviceDir(dir);
+            var vid = ReadHex(usb, "idVendor");
+            var pid = ReadHex(usb, "idProduct");
+            // ADR-0007: anything but the original Tiny is ignored and never opened.
+            if (!TinyIdentity.IsMatch(vid, pid))
+                continue;
             result.Add(new CameraInfo(
                 result.Count,
                 ReadSys(Path.Combine(dir, "name")) ?? Path.GetFileName(dir),
                 "/dev/" + Path.GetFileName(dir),
-                ReadHex(usb, "idVendor"),
-                ReadHex(usb, "idProduct")));
+                vid,
+                pid));
         }
         return result;
     }

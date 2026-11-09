@@ -35,6 +35,12 @@ O Épico 1 foi concluído em 2026-11-09, um dia antes do fim do suporte ao .NET 
 |---|---|---|---|
 | [Épico 5](epics/EPIC-5-port-macos.md) | P1 + P2 | Proposto, sem previsão | Backend macOS, aplicativo e distribuição; bloqueado até haver um Mac |
 
+## Futuro (sem fase definida)
+
+| Épico | Produto | Status | Resumo |
+|---|---|---|---|
+| [Épico 7](epics/EPIC-7-interface-em-ingles.md) | P2 | Proposto | Interface do Studio e da CLI em inglês, com seletor de idioma |
+
 ## Pendências técnicas (entram no Épico 2)
 
 * `GetGimbalPosInfo` (OSC) responde com pan/tilt UVC; o OBSBOT Center lê a atitude do gimbal (`gimbalGetAttitudeInfoR`), em que o pitch tem sinal oposto. Relatório §10.4.

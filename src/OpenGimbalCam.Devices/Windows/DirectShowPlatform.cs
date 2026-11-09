@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Runtime.Versioning;
-using System.Text.RegularExpressions;
 using OpenGimbalCam.Core.Camera;
 
 namespace OpenGimbalCam.Devices.Windows;
@@ -13,7 +12,7 @@ namespace OpenGimbalCam.Devices.Windows;
 /// which serializes every call on one MTA thread.
 /// </summary>
 [SupportedOSPlatform("windows")]
-public sealed partial class DirectShowPlatform : ICameraPlatform
+public sealed class DirectShowPlatform : ICameraPlatform
 {
     public string Name => "Windows (DirectShow + Kernel Streaming)";
 
@@ -74,12 +73,11 @@ public sealed partial class DirectShowPlatform : ICameraPlatform
             while (enumMoniker.Next(1, monikers, IntPtr.Zero) == 0)
             {
                 var (name, path) = ReadProperties(monikers[0]);
-                int? vid = null, pid = null;
-                var m = VidPidRegex().Match(path ?? "");
-                if (m.Success)
+                // ADR-0007: anything but the original Tiny is ignored and never opened.
+                if (!TinyIdentity.TryParseDevicePath(path, out var vid, out var pid) || !TinyIdentity.IsMatch(vid, pid))
                 {
-                    vid = Convert.ToInt32(m.Groups[1].Value, 16);
-                    pid = Convert.ToInt32(m.Groups[2].Value, 16);
+                    Marshal.ReleaseComObject(monikers[0]);
+                    continue;
                 }
                 result.Add((monikers[0], new CameraInfo(result.Count, name ?? "(sem nome)", path, vid, pid)));
             }
@@ -107,7 +105,4 @@ public sealed partial class DirectShowPlatform : ICameraPlatform
             Marshal.ReleaseComObject(bag);
         }
     }
-
-    [GeneratedRegex(@"vid_([0-9a-f]{4})&pid_([0-9a-f]{4})", RegexOptions.IgnoreCase)]
-    private static partial Regex VidPidRegex();
 }
