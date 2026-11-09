@@ -1,6 +1,6 @@
 # Épico 2: Versão 1.0.0 no Windows 11
 
-* **Status:** Proposto
+* **Status:** Em andamento (aceito pelo mantenedor em 2026-11-09).
 * **Produto:** P1 Driver + P2 Aplicativo · **Fase:** 1 (Windows)
 * **Abertura:** 2026-11-09 · **Conclusão:** —
 
@@ -27,6 +27,8 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 - [ ] [T3] `GetGimbalPosInfo`: decidir entre pan/tilt UVC e atitude do gimbal.
 - [ ] [T3, decisão HT] Definir o formato de distribuição no Windows (zip autocontido ou instalador) por ADR.
 - [x] [T1] Versionar os projetos (`0.x` até a release, depois `1.0.0`): `0.9.0` em `Directory.Build.props`, `ogcctl --version`. Feito pelo mesmo agente T2, por economia.
+- [x] [T2] Tela "Sobre" no `opengimbalcam-studio` com o aviso de marcas (falta conferir visualmente, na tarefa HT de validação).
+- [ ] [T3, decisão HT] Avaliar a migração do Avalonia 11.3 para a 12.x (vinda do Épico 1).
 
 ## Achados
 
