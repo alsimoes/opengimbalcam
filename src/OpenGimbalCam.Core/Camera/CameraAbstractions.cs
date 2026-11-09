@@ -54,10 +54,8 @@ public readonly record struct ControlValue(int Value, ControlFlags Flags);
 /// <param name="Path">DirectShow device path on Windows, /dev/videoN on Linux.</param>
 public sealed record CameraInfo(int Index, string Name, string? Path, int? VendorId, int? ProductId)
 {
-    /// <summary>USB vendor id of Remo Tech (OBSBOT); libdev matches "VID_3564&amp;PID_xxxx".</summary>
-    public const int ObsbotVendorId = 0x3564;
-
-    public bool IsObsbot => VendorId == ObsbotVendorId;
+    /// <summary>True for the original OBSBOT Tiny, the only supported device (<see cref="TinyIdentity"/>).</summary>
+    public bool IsSupportedTiny => TinyIdentity.IsMatch(VendorId, ProductId);
 
     public string UsbId => VendorId is { } v ? $"{v:X4}:{ProductId:X4}" : "sem VID/PID";
 }

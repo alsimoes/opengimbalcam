@@ -12,7 +12,7 @@ internal static class Program
         ogcctl - OpenGimbalCam CLI: controle aberto da OBSBOT Tiny original no Windows e no Linux (UVC + Extension Unit)
 
         Dispositivo:
-          list                                  Lista câmeras de vídeo (marca as OBSBOT, VID 3564)
+          list                                  Lista a OBSBOT Tiny original (VID 3564, PID FEF0); outros dispositivos são ignorados
           info                                  Topologia UVC, onde está a XU OBSBOT e controles UVC padrão
           get <controle>                        Lê um controle UVC padrão (pan, tilt, zoom, focus, brightness...)
           set <controle> <valor|auto>           Escreve um controle UVC padrão
@@ -63,6 +63,7 @@ internal static class Program
                 "msg-decode" => MsgDecode(args.Positional(0)),
                 "fw" => Firmware(args),
                 "osc" => OscCommands.Run(argv.Skip(1)),
+                "--version" or "-v" => Version(),
                 null or "help" or "-h" or "--help" => Help(),
                 _ => Fail($"comando desconhecido: {args.Command}"),
             };
@@ -81,6 +82,14 @@ internal static class Program
         return 0;
     }
 
+    private static int Version()
+    {
+        var v = typeof(Program).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .Cast<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? "0.9.0";
+        Console.WriteLine($"ogcctl {v.Split('+')[0]}");
+        return 0;
+    }
+
     private static int Fail(string message)
     {
         Console.Error.WriteLine($"erro: {message}");
@@ -94,12 +103,12 @@ internal static class Program
         var devices = Platform.Value.Enumerate();
         if (devices.Count == 0)
         {
-            Console.WriteLine($"Nenhuma câmera de vídeo encontrada ({Platform.Value.Name}).");
+            Console.WriteLine($"Nenhuma OBSBOT Tiny original (3564:FEF0) encontrada ({Platform.Value.Name}).");
             return 0;
         }
         foreach (var d in devices)
         {
-            Console.WriteLine($"[{d.Index}] {(d.IsObsbot ? "*" : " ")} {d.Name}  ({d.UsbId})");
+            Console.WriteLine($"[{d.Index}] {d.Name}  ({d.UsbId})");
             if (d.Path is not null)
                 Console.WriteLine($"       {d.Path}");
         }
@@ -111,9 +120,11 @@ internal static class Program
         var devices = Platform.Value.Enumerate();
         CameraInfo? device = args.Option("-d") is { } idx
             ? devices.FirstOrDefault(d => d.Index == int.Parse(idx, CultureInfo.InvariantCulture))
-            : devices.FirstOrDefault(d => d.IsObsbot);
+            : devices.FirstOrDefault();
         if (device is null)
-            return Fail("nenhuma câmera OBSBOT encontrada (use 'list' e -d <índice>).");
+            return Fail(args.Option("-d") is null
+                ? "nenhuma OBSBOT Tiny original encontrada. " + TinyIdentity.NotSupportedMessage
+                : "o dispositivo pedido não é a OBSBOT Tiny original ou não existe (use 'list'). " + TinyIdentity.NotSupportedMessage);
 
         using var session = Platform.Value.Open(device);
         return action(session);

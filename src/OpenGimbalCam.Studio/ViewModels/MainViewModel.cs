@@ -136,7 +136,7 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
         foreach (var c in found)
             Cameras.Add(c);
         SelectedCamera = found.FirstOrDefault(c => previous is not null && c.Path == previous)
-            ?? found.FirstOrDefault(c => c.IsObsbot)
+            ?? found.FirstOrDefault(c => c.IsSupportedTiny)
             ?? found.FirstOrDefault();
         if (found.Count == 0)
             Status = $"Nenhuma câmera encontrada ({_platform.Name}).";

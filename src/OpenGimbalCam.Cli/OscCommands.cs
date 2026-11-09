@@ -44,7 +44,7 @@ internal static class OscCommands
             uso:
               ogcctl osc serve [--udp] [--tcp] [--port 16284] [--bind 0.0.0.0] [--reply-port N]
                                [--obsbot-compat on|off] [-q]
-                  Escuta mensagens /OBSBOT/WebCam/... e controla as câmeras OBSBOT (VID 3564).
+                  Escuta mensagens /OBSBOT/WebCam/... e controla a OBSBOT Tiny original (VID 3564, PID FEF0).
                   Sem --udp/--tcp usa UDP, o padrão do OBSBOT Center. As respostas vão para
                   quem enviou (UDP: endereço de origem, ou --reply-port; TCP: a mesma conexão).
                   --obsbot-compat: liga (padrão) ou desliga a compatibilidade com o protocolo
