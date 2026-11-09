@@ -1,8 +1,8 @@
 # Épico 1: Runtime com suporte e CI no Windows
 
-* **Status:** Em andamento (desde 2026-11-09, branch `feature/dotnet10-ci`).
+* **Status:** Concluído em 2026-11-09 (PR #3).
 * **Produto:** P1 Driver + P2 Aplicativo · **Fase:** 1 (Windows)
-* **Abertura:** 2026-11-09 · **Conclusão:** —
+* **Abertura:** 2026-11-09 · **Conclusão:** 2026-11-09
 
 ## Objetivo
 
@@ -12,7 +12,7 @@ Garantir que os dois produtos sejam construídos e testados no Windows, em runti
 
 - [x] `TargetFramework` em `net10.0` (LTS), com build e testes passando sem avisos (local, 2026-11-09: 0 avisos, 86 testes aprovados).
 - [x] Dependências (Avalonia, FlashCap, CommunityToolkit.Mvvm, pacotes de teste) atualizadas para versões compatíveis.
-- [ ] CI executando build e testes em `windows-latest` (workflow criado; falta a primeira execução verde no PR).
+- [x] CI executando build e testes em `windows-latest` (verde no PR #3, 2026-11-09).
 - [x] README atualizado com o SDK exigido.
 
 ## Tarefas
@@ -31,4 +31,6 @@ Garantir que os dois produtos sejam construídos e testados no Windows, em runti
 
 ## Resultado
 
-—
+Os dois produtos rodam no .NET 10 (LTS), com SDK fixado em `global.json` e build e testes automáticos no `windows-latest` a cada push e PR para `master`. Pendências levadas adiante: avaliar a migração do Avalonia para a 12.x (candidata ao Épico 2).
+
+Achado de processo: a CI não rodou enquanto o repositório era privado, porque o job foi recusado por cobrança da conta. O mantenedor tornou o repositório público em 2026-11-09, e com isso o Actions passou a ser gratuito.

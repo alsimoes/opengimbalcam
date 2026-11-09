@@ -11,11 +11,11 @@ Ordem: 1 → 2 → 3 → 4, com o 6 em paralelo antes da 1.0.0. O Épico 5 só c
 | Épico | Produto | Status | Resumo |
 |---|---|---|---|
 | [Épico 0](epics/EPIC-0-adocao-do-harness.md) | Governança | Concluído | Adotar o Harness, varrer o workspace e alinhar a documentação |
-| [Épico 1](epics/EPIC-1-runtime-e-ci.md) | P1 + P2 | Em andamento | Migrar para o .NET 10 (LTS) e criar CI de build e testes no Windows |
-| [Épico 2](epics/EPIC-2-windows-1.0.0.md) | P1 + P2 | Proposto | Completar a validação no Windows 11, fechar as pendências técnicas e publicar a 1.0.0 |
+| [Épico 1](epics/EPIC-1-runtime-e-ci.md) | P1 + P2 | Concluído (2026-11-09) | Migrar para o .NET 10 (LTS) e criar CI de build e testes no Windows |
+| [Épico 2](epics/EPIC-2-windows-1.0.0.md) | P1 + P2 | Em andamento | Completar a validação no Windows 11, fechar as pendências técnicas e publicar a 1.0.0 |
 | [Épico 6](epics/EPIC-6-busca-de-marcas.md) | Governança | Aceito (2026-11-09), em paralelo; HT: aguardando | Busca de marcas nas bases oficiais (TMview, USPTO, WIPO, INPI) com guia passo a passo; deve terminar antes da publicação da 1.0.0 |
 
-O Épico 1 é urgente porque o .NET 8 sai de suporte em 2026-11-10. O Épico 6 pode correr em paralelo aos Épicos 1 e 2, porque é executado pelo mantenedor, mas a release 1.0.0 depende dele.
+O Épico 1 foi concluído em 2026-11-09, um dia antes do fim do suporte ao .NET 8. O Épico 6 pode correr em paralelo aos Épicos 1 e 2, porque é executado pelo mantenedor, mas a release 1.0.0 depende dele.
 
 ## Pesquisa: firmware
 
