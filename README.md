@@ -17,7 +17,7 @@ A OBSBOT Tiny (PID `FEF0`) não tem mais suporte nos drivers atuais do fabricant
 
 ## Compilar
 
-Requer o .NET 8 SDK ou mais novo, no Windows ou no Linux.
+Requer o .NET 10 SDK (veja `global.json`), no Windows ou no Linux.
 
 ```
 dotnet build OpenGimbalCam.slnx -c Release
@@ -26,8 +26,8 @@ dotnet test  OpenGimbalCam.slnx -c Release
 
 | Programa | Executável |
 |---|---|
-| CLI | `src/OpenGimbalCam.Cli/bin/Release/net8.0/ogcctl` (`.exe` no Windows) |
-| Interface gráfica | `src/OpenGimbalCam.Studio/bin/Release/net8.0/opengimbalcam-studio` |
+| CLI | `src/OpenGimbalCam.Cli/bin/Release/net10.0/ogcctl` (`.exe` no Windows) |
+| Interface gráfica | `src/OpenGimbalCam.Studio/bin/Release/net10.0/opengimbalcam-studio` |
 
 Para gerar um executável autocontido: `dotnet publish src/OpenGimbalCam.Studio -c Release -r linux-x64 --self-contained`. Troque o RID conforme o alvo (`win-x64`, `linux-arm64`…).
 
