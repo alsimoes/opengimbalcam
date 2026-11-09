@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OpenGimbalCam.Core/OpenGimbalCam.Core.csproj" />
+    <Project Path="src/OpenGimbalCam.Devices/OpenGimbalCam.Devices.csproj" />
+    <Project Path="src/OpenGimbalCam.Osc/OpenGimbalCam.Osc.csproj" />
+    <Project Path="src/OpenGimbalCam.Cli/OpenGimbalCam.Cli.csproj" />
+    <Project Path="src/OpenGimbalCam.Studio/OpenGimbalCam.Studio.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OpenGimbalCam.Tests/OpenGimbalCam.Tests.csproj" />
+  </Folder>
+</Solution>

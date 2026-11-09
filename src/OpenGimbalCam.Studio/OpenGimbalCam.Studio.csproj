@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Desktop GUI (Windows and Linux): gimbal, zoom, image controls and the OSC server. -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>opengimbalcam-studio</AssemblyName>
+    <RootNamespace>OpenGimbalCam.Studio</RootNamespace>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.22" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="FlashCap" Version="1.10.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenGimbalCam.Core\OpenGimbalCam.Core.csproj" />
+    <ProjectReference Include="..\OpenGimbalCam.Devices\OpenGimbalCam.Devices.csproj" />
+    <ProjectReference Include="..\OpenGimbalCam.Osc\OpenGimbalCam.Osc.csproj" />
+  </ItemGroup>
+
+</Project>
