@@ -30,6 +30,7 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 - [x] [T2] Tela "Sobre" no `opengimbalcam-studio` com o aviso de marcas. A conferência visual fica no item A1 da [HT-2.1](#ht-21-validar-a-câmera-no-windows).
 - [ ] [T3, decisão HT] Avaliar a migração do Avalonia 11.3 para a 12.x (vinda do Épico 1).
 - [ ] [T2] Botão no Studio para restaurar todos os controles de imagem ao padrão da câmera (pedido do mantenedor na HT-2.1, 2026-11-09).
+- [ ] [T3, decisão HT] Gravação com áudio: capturar o microfone da Tiny (UAC, WASAPI no Windows) e gravar PCM no AVI junto com o MJPEG. Hoje a gravação é só de vídeo (2026-11-09).
 
 ## Achados
 
@@ -37,6 +38,7 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 * A filtragem por PID acontece na enumeração das duas plataformas, então a ponte OSC e o Studio herdam a restrição sem código próprio.
 * **HT-2.1, primeira rodada (2026-11-09), com a build anterior ao PR #5:** os controles de imagem (matiz, exposição etc.) e os controles da câmera no Studio funcionaram. A tela "Sobre" não foi encontrada porque o PR #5, que a cria, ainda não estava no `master`. Ficam pendentes: A1 a A3 com a build nova e B1 a B6.
 * O mantenedor pediu a interface em inglês como trabalho futuro: virou o [Épico 7](EPIC-7-interface-em-ingles.md).
+* **HT-2.1, foto e gravação (2026-11-09, build anterior ao PR #5):** a foto funcionou (A2). A gravação gera vídeo, mas sem áudio (A3): o `MjpegAviWriter` nunca capturou áudio, então não é regressão, é função que falta.
 
 ## Tarefas HT
 
