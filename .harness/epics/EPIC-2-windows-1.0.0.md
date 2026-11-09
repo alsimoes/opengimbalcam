@@ -22,24 +22,27 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 ## Tarefas
 
 - [x] [T2] Restringir driver, CLI, ponte OSC e app ao PID FEF0 (ADR-0007), com testes (`TinyIdentity`, 12 casos de teste; 2026-11-09).
-- [ ] [HT] Validar o Studio (vídeo, "Sobre", foto, gravação) e confirmar visualmente os comandos ⚠️ (HDR, exposição, modos de IA, trava de IA, rastreamento, suspensão). HT: aguardando, entregue em 2026-11-09. Guia: [HT-2.1](#ht-21-validar-a-câmera-no-windows).
+- [ ] [HT] Validar o Studio (vídeo, "Sobre", foto, gravação) e confirmar visualmente os comandos ⚠️ (HDR, exposição, modos de IA, trava de IA, rastreamento, suspensão). HT: em andamento (primeira rodada parcial em 2026-11-09). Guia: [HT-2.1](#ht-21-validar-a-câmera-no-windows).
 - [ ] [HT] Escolher a licença do projeto; o ADR e o `LICENSE` ficam com o T3. HT: aguardando, entregue em 2026-11-09. Guia: [HT-2.2](#ht-22-escolher-a-licença).
 - [ ] [T3] `GetGimbalPosInfo`: decidir entre pan/tilt UVC e atitude do gimbal.
 - [ ] [T3, decisão HT] Definir o formato de distribuição no Windows (zip autocontido ou instalador) por ADR.
 - [x] [T1] Versionar os projetos (`0.x` até a release, depois `1.0.0`): `0.9.0` em `Directory.Build.props`, `ogcctl --version`. Feito pelo mesmo agente T2, por economia.
 - [x] [T2] Tela "Sobre" no `opengimbalcam-studio` com o aviso de marcas. A conferência visual fica no item A1 da [HT-2.1](#ht-21-validar-a-câmera-no-windows).
 - [ ] [T3, decisão HT] Avaliar a migração do Avalonia 11.3 para a 12.x (vinda do Épico 1).
+- [ ] [T2] Botão no Studio para restaurar todos os controles de imagem ao padrão da câmera (pedido do mantenedor na HT-2.1, 2026-11-09).
 
 ## Achados
 
 * **Sem arquivo LICENSE.** O repositório é público desde 2026-11-09, mas não tem licença; sem ela, ninguém pode reutilizar o código legalmente. A tela "Sobre" omite a linha de licença até isso ser decidido. Decisão do mantenedor (HT), por ADR.
 * A filtragem por PID acontece na enumeração das duas plataformas, então a ponte OSC e o Studio herdam a restrição sem código próprio.
+* **HT-2.1, primeira rodada (2026-11-09), com a build anterior ao PR #5:** os controles de imagem (matiz, exposição etc.) e os controles da câmera no Studio funcionaram. A tela "Sobre" não foi encontrada porque o PR #5, que a cria, ainda não estava no `master`. Ficam pendentes: A1 a A3 com a build nova e B1 a B6.
+* O mantenedor pediu a interface em inglês como trabalho futuro: virou o [Épico 7](EPIC-7-interface-em-ingles.md).
 
 ## Tarefas HT
 
 ### HT-2.1: Validar a câmera no Windows
 
-* **Épico:** este · **Tier:** HT · **Status:** aguardando
+* **Épico:** este · **Tier:** HT · **Status:** em andamento (primeira rodada parcial em 2026-11-09; veja Achados)
 * **Delegada em:** 2026-11-09 · **Bloqueia:** a coluna Windows da matriz de validação (1.0.0)
 * **Tempo estimado:** 30 min
 
