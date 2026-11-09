@@ -1,5 +1,81 @@
-original-driver/
-bin/
-obj/
-*.user
+# =============================================================================
+# OpenGimbalCam .gitignore
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Vendor material and secrets (governance: never versioned)
+# -----------------------------------------------------------------------------
+# Manufacturer binaries, installers and firmware, documented by name/version/SHA-256.
+.docs/original-driver/
+# OBSBOT Center config stores the UserLoginToken (JWT) in plain text.
+global.ini
+# Local secrets and environment files.
+.env
+.env.*
+*.pfx
+*.snk
+
+# -----------------------------------------------------------------------------
+# .NET build output
+# -----------------------------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+publish/
+*.nupkg
+*.snupkg
+
+# -----------------------------------------------------------------------------
+# .NET tests and coverage
+# -----------------------------------------------------------------------------
+[Tt]est[Rr]esult*/
+*.trx
+coverage/
+coverage*.json
+coverage*.xml
+*.coverage
+*.coveragexml
+
+# -----------------------------------------------------------------------------
+# IDEs and editors
+# -----------------------------------------------------------------------------
+# Visual Studio
 .vs/
+*.user
+*.suo
+*.userprefs
+# JetBrains Rider
+.idea/
+*.DotSettings.user
+# VS Code (keep shared settings only)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# -----------------------------------------------------------------------------
+# Python (reverse-engineering scripts in tools/re)
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# -----------------------------------------------------------------------------
+# AI agents (local, per-user settings)
+# -----------------------------------------------------------------------------
+.claude/settings.local.json
+
+# -----------------------------------------------------------------------------
+# Operating system
+# -----------------------------------------------------------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+._*
+*~
