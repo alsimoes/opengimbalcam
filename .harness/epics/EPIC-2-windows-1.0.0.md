@@ -21,16 +21,17 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 
 ## Tarefas
 
-- [ ] [T2] Restringir driver, CLI, ponte OSC e app ao PID FEF0 (ADR-0007), com testes.
+- [x] [T2] Restringir driver, CLI, ponte OSC e app ao PID FEF0 (ADR-0007), com testes (`TinyIdentity`, 12 casos de teste; 2026-11-09).
 - [ ] [HT + T2] Validar foto e gravação do `opengimbalcam-studio` com a câmera.
 - [ ] [HT] Confirmar visualmente os comandos ⚠️ (HDR, modo de exposição, modos de IA, trava de IA, suspensão).
 - [ ] [T3] `GetGimbalPosInfo`: decidir entre pan/tilt UVC e atitude do gimbal.
 - [ ] [T3, decisão HT] Definir o formato de distribuição no Windows (zip autocontido ou instalador) por ADR.
-- [ ] [T1] Versionar os projetos (`0.x` até a release, depois `1.0.0`).
+- [x] [T1] Versionar os projetos (`0.x` até a release, depois `1.0.0`): `0.9.0` em `Directory.Build.props`, `ogcctl --version`. Feito pelo mesmo agente T2, por economia.
 
 ## Achados
 
-—
+* **Sem arquivo LICENSE.** O repositório é público desde 2026-11-09, mas não tem licença; sem ela, ninguém pode reutilizar o código legalmente. A tela "Sobre" omite a linha de licença até isso ser decidido. Decisão do mantenedor (HT), por ADR.
+* A filtragem por PID acontece na enumeração das duas plataformas, então a ponte OSC e o Studio herdam a restrição sem código próprio.
 
 ## Resultado
 
