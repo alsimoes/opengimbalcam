@@ -1,0 +1,16 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:OpenGimbalCam.Studio.ViewModels"
+        x:Class="OpenGimbalCam.Studio.AboutWindow"
+        x:DataType="vm:AboutViewModel"
+        Title="Sobre"
+        Width="460" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner">
+  <StackPanel Margin="20" Spacing="10">
+    <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="SemiBold" />
+    <TextBlock Text="{Binding Version}" Opacity="0.7" />
+    <TextBlock Text="{Binding Scope}" TextWrapping="Wrap" />
+    <TextBlock Text="{Binding Trademark}" TextWrapping="Wrap" FontSize="12" Opacity="0.7" />
+    <Button Content="Fechar" HorizontalAlignment="Right" Click="OnClose" />
+  </StackPanel>
+</Window>
