@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- OSC server compatible with OBSBOT Center's /OBSBOT/WebCam/* protocol. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenGimbalCam.Core\OpenGimbalCam.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="OpenGimbalCam.Tests" />
+  </ItemGroup>
+
+</Project>

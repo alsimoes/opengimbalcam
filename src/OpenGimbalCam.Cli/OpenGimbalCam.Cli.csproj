@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ogcctl</AssemblyName>
+    <RootNamespace>OpenGimbalCam.Cli</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenGimbalCam.Core\OpenGimbalCam.Core.csproj" />
+    <ProjectReference Include="..\OpenGimbalCam.Devices\OpenGimbalCam.Devices.csproj" />
+    <ProjectReference Include="..\OpenGimbalCam.Osc\OpenGimbalCam.Osc.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Camera backends: Windows (DirectShow + Kernel Streaming) and Linux (V4L2 + uvcvideo). -->
+
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenGimbalCam.Core\OpenGimbalCam.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="OpenGimbalCam.Tests" />
+  </ItemGroup>
+
+</Project>

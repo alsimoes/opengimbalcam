@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Platform-independent: XU protocol, direct commands, 0xAA messages, firmware packages
+       and the camera abstractions implemented by OpenGimbalCam.Devices. -->
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="OpenGimbalCam.Tests" />
+  </ItemGroup>
+
+</Project>
