@@ -14,6 +14,7 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 - [x] Decisão do [ADR-0008](../decisions/ADR-0008-nomes-dos-produtos.md) (nomes sem a marca do fabricante) tomada e aplicada em 2026-11-09: OpenGimbalCam, repositório `alsimoes/opengimbalcam`.
 - [ ] Busca de marcas nas bases oficiais concluída ([Épico 6](EPIC-6-busca-de-marcas.md)), sem resultado vermelho.
 - [ ] Aplicativo e artefatos de release levam o aviso de marcas (tela "Sobre" e pacote).
+- [ ] Gravação do Studio com áudio do microfone da Tiny, sincronizado com o vídeo (decisão do mantenedor, 2026-11-09).
 - [ ] Coluna Windows da [matriz de validação](../roadmap.md#matriz-de-validação) sem ❌; cada ⚠️ resolvido ou aceito explicitamente pelo mantenedor.
 - [ ] Pendências técnicas do roadmap resolvidas ou adiadas por decisão registrada.
 - [ ] Executável autocontido `win-x64` gerado pela CI (Épico 1), com instruções de instalação e uso.
@@ -30,7 +31,8 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 - [x] [T2] Tela "Sobre" no `opengimbalcam-studio` com o aviso de marcas. A conferência visual fica no item A1 da [HT-2.1](#ht-21-validar-a-câmera-no-windows).
 - [ ] [T3, decisão HT] Avaliar a migração do Avalonia 11.3 para a 12.x (vinda do Épico 1).
 - [ ] [T2] Botão no Studio para restaurar todos os controles de imagem ao padrão da câmera (pedido do mantenedor na HT-2.1, 2026-11-09).
-- [ ] [T3, decisão HT] Gravação com áudio: capturar o microfone da Tiny (UAC, WASAPI no Windows) e gravar PCM no AVI junto com o MJPEG. Hoje a gravação é só de vídeo (2026-11-09).
+- [ ] [T3 desenho, T2 implementação] Gravação com áudio (obrigatória na 1.0.0, decisão do mantenedor em 2026-11-09): capturar o microfone da Tiny (UAC, WASAPI no Windows) e gravar PCM no AVI junto com o MJPEG. Implementado em 2026-11-09 ([ADR-0011](../decisions/ADR-0011-audio-na-gravacao.md), Proposta); falta validar na câmera (HT-2.1, A3).
+- [ ] [T2] Corrigir: o processo `opengimbalcam-studio` continua vivo, sem janela, depois que a janela é fechada, e trava as DLLs no build seguinte. Suspeita: thread não-background (por exemplo, o `WorkerThread` do DirectShow ou o servidor OSC). Visto em 2026-11-09.
 
 ## Achados
 
