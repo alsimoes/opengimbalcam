@@ -24,7 +24,7 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 
 - [x] [T2] Restringir driver, CLI, ponte OSC e app ao PID FEF0 (ADR-0007), com testes (`TinyIdentity`, 12 casos de teste; 2026-11-09).
 - [ ] [HT] Validar o Studio (vídeo, "Sobre", foto, gravação) e confirmar visualmente os comandos ⚠️ (HDR, exposição, modos de IA, trava de IA, rastreamento, suspensão). HT: em andamento (primeira rodada parcial em 2026-11-09). Guia: [HT-2.1](#ht-21-validar-a-câmera-no-windows).
-- [ ] [HT] Escolher a licença do projeto; o ADR e o `LICENSE` ficam com o T3. HT: aguardando, entregue em 2026-11-09. Guia: [HT-2.2](#ht-22-escolher-a-licença).
+- [x] [HT] Escolher a licença do projeto: MIT, em 2026-11-09 ([ADR-0012](../decisions/ADR-0012-licenca-mit.md), `LICENSE`, linha na tela "Sobre"). Guia: [HT-2.2](#ht-22-escolher-a-licença).
 - [ ] [T3] `GetGimbalPosInfo`: decidir entre pan/tilt UVC e atitude do gimbal.
 - [ ] [T3, decisão HT] Definir o formato de distribuição no Windows (zip autocontido ou instalador) por ADR.
 - [x] [T1] Versionar os projetos (`0.x` até a release, depois `1.0.0`): `0.9.0` em `Directory.Build.props`, `ogcctl --version`. Feito pelo mesmo agente T2, por economia.
@@ -36,11 +36,12 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 
 ## Achados
 
-* **Sem arquivo LICENSE.** O repositório é público desde 2026-11-09, mas não tem licença; sem ela, ninguém pode reutilizar o código legalmente. A tela "Sobre" omite a linha de licença até isso ser decidido. Decisão do mantenedor (HT), por ADR.
+* **Sem arquivo LICENSE** (resolvido em 2026-11-09): o mantenedor escolheu a MIT na HT-2.2 ([ADR-0012](../decisions/ADR-0012-licenca-mit.md)).
 * A filtragem por PID acontece na enumeração das duas plataformas, então a ponte OSC e o Studio herdam a restrição sem código próprio.
 * **HT-2.1, primeira rodada (2026-11-09), com a build anterior ao PR #5:** os controles de imagem (matiz, exposição etc.) e os controles da câmera no Studio funcionaram. A tela "Sobre" não foi encontrada porque o PR #5, que a cria, ainda não estava no `master`. Ficam pendentes: A1 a A3 com a build nova e B1 a B6.
 * O mantenedor pediu a interface em inglês como trabalho futuro: virou o [Épico 7](EPIC-7-interface-em-ingles.md).
 * **HT-2.1, foto e gravação (2026-11-09, build anterior ao PR #5):** a foto funcionou (A2). A gravação gera vídeo, mas sem áudio (A3): o `MjpegAviWriter` nunca capturou áudio, então não é regressão, é função que falta.
+* **HT-2.1, segunda rodada (2026-11-09, build com os PRs #5 e #6):** A1 (tela "Sobre") validado; B1 a B6 funcionaram como esperado. A3: a gravação **continua sem áudio** mesmo com a captura WASAPI; em diagnóstico. O endpoint "OBSBOT Tiny Microphone" existe, com pai `USBVID_3564&PID_FEF0&MI_02`, mas o ID do endpoint (`SWDMMDEVAPI...`) não traz VID/PID.
 
 ## Tarefas HT
 
@@ -105,7 +106,7 @@ Uma linha por item (A1 a A3, B1 a B6), na conversa com o orquestrador. Ele atual
 
 ### HT-2.2: Escolher a licença
 
-* **Épico:** este · **Tier:** HT (decisão do mantenedor) · **Status:** aguardando
+* **Épico:** este · **Tier:** HT (decisão do mantenedor) · **Status:** concluída em 2026-11-09 (MIT)
 * **Delegada em:** 2026-11-09 · **Bloqueia:** a 1.0.0 e a linha de licença na tela "Sobre"
 * **Tempo estimado:** 5 min
 
