@@ -11,6 +11,8 @@ public sealed class AboutViewModel
 
     public string Scope => "Projeto independente e de código aberto; suporta apenas a OBSBOT Tiny original.";
 
+    public string License => "Licença MIT. Veja o arquivo LICENSE.";
+
     public string Trademark =>
         "Este projeto não é afiliado, autorizado, patrocinado nem endossado pela fabricante das câmeras OBSBOT "
         + "nem por qualquer outro titular das marcas citadas. OBSBOT, OBSBOT Tiny e demais nomes de produtos "

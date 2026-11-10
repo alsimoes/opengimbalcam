@@ -10,6 +10,7 @@
     <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="SemiBold" />
     <TextBlock Text="{Binding Version}" Opacity="0.7" />
     <TextBlock Text="{Binding Scope}" TextWrapping="Wrap" />
+    <TextBlock Text="{Binding License}" />
     <TextBlock Text="{Binding Trademark}" TextWrapping="Wrap" FontSize="12" Opacity="0.7" />
     <Button Content="Fechar" HorizontalAlignment="Right" Click="OnClose" />
   </StackPanel>
