@@ -1,6 +1,6 @@
 # ADR-0011: Áudio na gravação do Studio com WASAPI (NAudio.Wasapi)
 
-* **Status:** Proposta
+* **Status:** Aceita (pelo mantenedor em 2026-11-09)
 * **Data:** 2026-11-09
 * **Decisores:** André Simões
 
