@@ -110,3 +110,7 @@ As regras completas estão em [`.harness/governance.md`](.harness/governance.md)
 ## Marcas registradas e propriedade intelectual
 
 Este projeto é independente e não tem relação com a fabricante das câmeras OBSBOT nem com os demais titulares das marcas citadas. As marcas são usadas só de forma nominativa. Nenhum binário, firmware ou manual do fabricante é redistribuído, e a engenharia reversa foi feita para fins de interoperabilidade. O software é fornecido sem garantia. Detalhes e contato para titulares de direitos em [TRADEMARKS.md](TRADEMARKS.md).
+
+## Licença
+
+Código licenciado sob a [licença MIT](LICENSE) ([ADR-0012](.harness/decisions/ADR-0012-licenca-mit.md)).
