@@ -353,7 +353,7 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
                 AddLog($"gravação salva: {done.Path} ({done.Frames} quadros)");
             IsRecording = false;
         }
-        else if (Run(() => AddLog($"gravando em {_preview.StartRecording(MediaFolder(Environment.SpecialFolder.MyVideos))}")))
+        else if (Run(() => AddLog($"gravando em {_preview.StartRecording(MediaFolder(Environment.SpecialFolder.MyVideos), AddLog)}")))
         {
             IsRecording = true;
         }

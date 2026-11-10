@@ -1,6 +1,8 @@
 using Avalonia.Media.Imaging;
 using FlashCap;
+using OpenGimbalCam.Core.Audio;
 using OpenGimbalCam.Core.Camera;
+using OpenGimbalCam.Devices;
 
 namespace OpenGimbalCam.Studio;
 
@@ -18,6 +20,7 @@ internal sealed class CameraPreview : IAsyncDisposable
     private CaptureDevice? _device;
     private VideoCharacteristics? _format;
     private MjpegAviWriter? _recorder;
+    private IAudioCapture? _audioCapture;
     private byte[]? _lastImage;
     private int _busy;
 
@@ -63,7 +66,7 @@ internal sealed class CameraPreview : IAsyncDisposable
     }
 
     /// <summary>Starts writing every frame to an MJPEG AVI; only for JPEG streams.</summary>
-    public string StartRecording(string directory)
+    public string StartRecording(string directory, Action<string>? log = null)
     {
         if (_format is not { PixelFormat: PixelFormats.JPEG } f)
             throw new NotSupportedException($"gravação só com vídeo MJPEG (o formato aberto é {Format}).");
@@ -73,7 +76,36 @@ internal sealed class CameraPreview : IAsyncDisposable
         {
             if (_recorder is not null)
                 return _recorder.Path;
-            _recorder = new MjpegAviWriter(path, f.Width, f.Height, Fps(f));
+            var audio = AudioPlatform.CreateTinyCapture(out var reason);
+            try
+            {
+                _recorder = new MjpegAviWriter(path, f.Width, f.Height, Fps(f), audio?.Format);
+                if (audio is not null)
+                {
+                    audio.DataAvailable += OnAudio;
+                    audio.Start();
+                    _audioCapture = audio;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Audio failed after the writer opened: fall back to a video-only recording.
+                reason = $"falha ao iniciar o microfone ({ex.Message})";
+                if (audio is not null)
+                {
+                    audio.DataAvailable -= OnAudio;
+                    audio.Dispose();
+                    audio = null;
+                }
+                if (_recorder is { } failed)
+                {
+                    failed.Dispose();
+                    File.Delete(path);
+                }
+                _recorder = new MjpegAviWriter(path, f.Width, f.Height, Fps(f));
+            }
+            if (audio is null)
+                log?.Invoke($"gravação sem áudio: {reason}");
         }
         return path;
     }
@@ -81,14 +113,32 @@ internal sealed class CameraPreview : IAsyncDisposable
     /// <summary>Finishes the AVI; returns its path and frame count, or null when not recording.</summary>
     public (string Path, int Frames)? StopRecording()
     {
+        MjpegAviWriter r;
+        IAudioCapture? audio;
         lock (_recordLock)
         {
-            if (_recorder is not { } r)
+            if (_recorder is not { } current)
                 return null;
+            r = current;
+            audio = _audioCapture;
             _recorder = null;
-            r.Dispose();
-            return (r.Path, r.Frames);
+            _audioCapture = null;
         }
+        // Outside the lock: stopping waits for the audio thread, which takes the lock in OnAudio.
+        if (audio is not null)
+        {
+            audio.DataAvailable -= OnAudio;
+            audio.Stop();
+            audio.Dispose();
+        }
+        r.Dispose();
+        return (r.Path, r.Frames);
+    }
+
+    private void OnAudio(ReadOnlyMemory<byte> pcm)
+    {
+        lock (_recordLock)
+            _recorder?.WriteAudio(pcm.Span);
     }
 
     public async ValueTask DisposeAsync()
