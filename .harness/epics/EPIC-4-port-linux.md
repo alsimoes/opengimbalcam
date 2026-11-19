@@ -1,6 +1,6 @@
 # Épico 4: Port para Linux
 
-* **Status:** Proposto. É a release seguinte à 1.0.0 (sugerida 1.1.0, ADR-0006) e não depende mais do Épico 3 (decisão do mantenedor em 2026-11-19).
+* **Status:** Proposto, aguardando o aceite do mantenedor (a 1.0.0 foi publicada em 2026-11-19). É a release seguinte à 1.0.0 (sugerida 1.1.0, ADR-0006) e não depende mais do Épico 3 (decisão do mantenedor em 2026-11-19).
 * **Produto:** P1 Driver + P2 Aplicativo · **Fase:** 2 (Linux)
 * **Abertura:** 2026-11-09 · **Conclusão:** —
 

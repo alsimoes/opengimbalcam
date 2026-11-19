@@ -4,7 +4,7 @@ As fases seguem o [ADR-0006](decisions/ADR-0006-windows-primeiro.md): primeiro o
 
 Ordem: 1 → 2 → 4, com o 6 em paralelo antes da 1.0.0. O Linux (Épico 4) é a release seguinte à 1.0.0 e não depende mais do Épico 3, que segue como pesquisa (decisão do mantenedor, 2026-11-19). O Épico 5 só começa quando houver um Mac. Todos os épicos seguem a premissa de atender só a OBSBOT Tiny original ([ADR-0007](decisions/ADR-0007-premissa-tiny-original.md)).
 
-**Ação pendente do mantenedor:** publicar o rascunho da release 1.0.0 ([HT-2.4](epics/EPIC-2-windows-1.0.0.md#ht-24-publicar-a-100)).
+**Release 1.0.0 publicada em 2026-11-19.** Ação pendente do mantenedor: aceitar formalmente o [Épico 4](epics/EPIC-4-port-linux.md) (Linux, 1.1.0) para iniciá-lo.
 
 ## Fase 1: Windows 11 → 1.0.0
 
@@ -12,7 +12,7 @@ Ordem: 1 → 2 → 4, com o 6 em paralelo antes da 1.0.0. O Linux (Épico 4) é 
 |---|---|---|---|
 | [Épico 0](epics/EPIC-0-adocao-do-harness.md) | Governança | Concluído | Adotar o Harness, varrer o workspace e alinhar a documentação |
 | [Épico 1](epics/EPIC-1-runtime-e-ci.md) | P1 + P2 | Concluído (2026-11-09) | Migrar para o .NET 10 (LTS) e criar CI de build e testes no Windows |
-| [Épico 2](epics/EPIC-2-windows-1.0.0.md) | P1 + P2 | Em andamento | Completar a validação no Windows 11, fechar as pendências técnicas e publicar a 1.0.0 |
+| [Épico 2](epics/EPIC-2-windows-1.0.0.md) | P1 + P2 | Concluído (2026-11-19, [v1.0.0](https://github.com/alsimoes/opengimbalcam/releases/tag/v1.0.0)) | Completar a validação no Windows 11, fechar as pendências técnicas e publicar a 1.0.0 |
 | [Épico 6](epics/EPIC-6-busca-de-marcas.md) | Governança | Concluído (2026-11-19) | Busca de marcas nas bases oficiais (TMview, USPTO, WIPO, INPI) com guia passo a passo; deve terminar antes da publicação da 1.0.0 |
 
 O Épico 1 foi concluído em 2026-11-09, um dia antes do fim do suporte ao .NET 8. O Épico 6 pode correr em paralelo aos Épicos 1 e 2, porque é executado pelo mantenedor, mas a release 1.0.0 depende dele.
@@ -27,7 +27,7 @@ O Épico 1 foi concluído em 2026-11-09, um dia antes do fim do suporte ao .NET 
 
 | Épico | Produto | Status | Resumo |
 |---|---|---|---|
-| [Épico 4](epics/EPIC-4-port-linux.md) | P1 + P2 | Proposto (próxima release, sugerida 1.1.0; aguarda o Épico 2) | Validar o driver e o aplicativo no Linux, regra udev e distribuição `linux-x64` |
+| [Épico 4](epics/EPIC-4-port-linux.md) | P1 + P2 | Proposto (próxima release, sugerida 1.1.0; aguarda o aceite do mantenedor) | Validar o driver e o aplicativo no Linux, regra udev e distribuição `linux-x64` |
 
 ## Fase 3: macOS
 
@@ -41,7 +41,7 @@ O Épico 1 foi concluído em 2026-11-09, um dia antes do fim do suporte ao .NET 
 |---|---|---|---|
 | [Épico 7](epics/EPIC-7-interface-em-ingles.md) | P2 | Proposto | Interface do Studio e da CLI em inglês, com seletor de idioma |
 
-## Pendências técnicas (entram no Épico 2)
+## Pendências técnicas (pós-1.0.0)
 
 * `GetGimbalPosInfo` (OSC) responde com pan/tilt UVC; o OBSBOT Center lê a atitude do gimbal (`gimbalGetAttitudeInfoR`), em que o pitch tem sinal oposto. Relatório §10.4. **Adiado para depois da 1.0.0** (corte da release, 2026-11-19); documentado como limitação nas notas de versão.
 * O significado dos valores dos comandos diretos (por exemplo, modos de IA) vem do nome das funções da `libdev.dll` e ainda precisa ser confirmado na Tiny. Relatório §5.5. Efeitos confirmados visualmente na HT-2.1 (2026-11-09).

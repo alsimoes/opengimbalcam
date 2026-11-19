@@ -1,8 +1,8 @@
 # Épico 2: Versão 1.0.0 no Windows 11
 
-* **Status:** Em andamento (aceito pelo mantenedor em 2026-11-09).
+* **Status:** Concluído em 2026-11-19 (aceito pelo mantenedor em 2026-11-09).
 * **Produto:** P1 Driver + P2 Aplicativo · **Fase:** 1 (Windows)
-* **Abertura:** 2026-11-09 · **Conclusão:** —
+* **Abertura:** 2026-11-09 · **Conclusão:** 2026-11-19
 
 ## Objetivo
 
@@ -18,7 +18,7 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 - [x] Coluna Windows da [matriz de validação](../roadmap.md#matriz-de-validação) sem ❌; cada ⚠️ resolvido ou aceito explicitamente pelo mantenedor.
 - [x] Pendências técnicas do roadmap resolvidas ou adiadas por decisão registrada (`GetGimbalPosInfo` adiado para depois da 1.0.0; veja as tarefas).
 - [x] Executável autocontido `win-x64` gerado pela CI (Épico 1), com instruções de instalação e uso.
-- [ ] Release 1.0.0 publicada, com notas de versão.
+- [x] Release 1.0.0 publicada, com notas de versão ([v1.0.0](https://github.com/alsimoes/opengimbalcam/releases/tag/v1.0.0), 2026-11-19).
 
 ## Tarefas
 
@@ -37,7 +37,7 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 - [x] [T2, revisão T3] Empacotamento Windows: metadados, `THIRD-PARTY-NOTICES.md` e `licenses/`, `build-release.ps1`, instalador Inno Setup, `release.yml` e `LEIA-ME.txt` (plano, B3 a B7; branch `feature/windows-packaging`). Feito em 2026-11-19; revisão T3 pendente. Verificado: build e testes com 0 avisos; `build-release.ps1 -SkipInstaller` gerou o zip e o `SHA256SUMS.txt`, e o `ogcctl.exe --version` do zip roda. **Pendente:** o `.iss` só é compilado na CI (o Inno Setup não estava instalado na máquina do agente); o Studio do pacote não foi aberto (Tiny possivelmente conectada); `.github/release-notes/v1.0.0.md` (exigido pelo `release.yml` só para tags) e o README ficam para o corte (B8/B9).
 - [x] [HT] Validar o candidato a release com a Tiny: pacote, nova interface e itens pendentes da HT-2.1. Concluída em 2026-11-19, sem falhas (veja os achados). Guia: [HT-2.3](#ht-23-validar-o-candidato-a-release).
 - [x] [T1/T2, revisão T3] Corte da 1.0.0: versão, notas de versão, matriz e resultado do épico (plano, B9; branch `release/1.0.0`). Feito em 2026-11-19 (T3).
-- [ ] [HT] Autorizar a tag `v1.0.0` e publicar a release. Tag autorizada pelo mantenedor em 2026-11-19; falta publicar o rascunho. Guia: [HT-2.4](#ht-24-publicar-a-100).
+- [x] [HT] Autorizar a tag `v1.0.0` e publicar a release. Tag criada em 2026-11-19 com autorização do mantenedor; release publicada por ele no mesmo dia. Guia: [HT-2.4](#ht-24-publicar-a-100).
 
 ## Achados
 
@@ -204,12 +204,12 @@ Uma linha por item (P1 a P3, S1 a S17 e, se fizer a parte C, B1 a B6), na conver
 
 #### Critério de aceite
 
-- [ ] Todos os itens com resultado anotado.
-- [ ] Nenhuma falha bloqueante em aberto.
+- [x] Todos os itens com resultado anotado (S17 pendente, sem bloqueio).
+- [x] Nenhuma falha bloqueante em aberto.
 
 ### HT-2.4: Publicar a 1.0.0
 
-* **Épico:** este · **Tier:** HT · **Status:** aguardando (depende da HT-2.3, do Épico 6 e do corte da 1.0.0)
+* **Épico:** este · **Tier:** HT · **Status:** concluída em 2026-11-19
 * **Delegada em:** 2026-11-19 · **Bloqueia:** a conclusão deste épico
 * **Tempo estimado:** 15 min
 
@@ -252,4 +252,12 @@ O link da release publicada, na conversa.
 
 ## Resultado
 
-—
+A versão 1.0.0 foi publicada em 2026-11-19 no [GitHub Releases](https://github.com/alsimoes/opengimbalcam/releases/tag/v1.0.0), com o instalador, o zip portátil e o `SHA256SUMS.txt` gerados pelo `release.yml`. O driver, a CLI, o servidor OSC e o Studio, com a interface profissional e a gravação com áudio, foram validados na Tiny pelo mantenedor (HT-2.1 e HT-2.3).
+
+Pendências para depois da 1.0.0:
+* `GetGimbalPosInfo` (OSC) segue com pan/tilt UVC, em vez da atitude do gimbal.
+* Captura de tela do Studio no README (HT-2.3, S17).
+* Assinatura de código (exige certificado; tarefa do mantenedor), winget, `ogcctl` no PATH, migração para o Avalonia 12, tema claro e interface em inglês ([Épico 7](EPIC-7-interface-em-ingles.md)).
+* Pacote testado só na máquina do mantenedor, não num Windows 11 limpo.
+
+Próximo: o port para Linux ([Épico 4](EPIC-4-port-linux.md), versão sugerida 1.1.0).
