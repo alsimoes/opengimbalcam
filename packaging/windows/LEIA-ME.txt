@@ -1,0 +1,48 @@
+OpenGimbalCam - Windows
+
+Driver aberto, CLI (ogcctl) e aplicativo (opengimbalcam-studio) para a
+OBSBOT Tiny original (USB VID 3564, PID FEF0). Outros modelos nao sao
+suportados.
+
+REQUISITOS
+  * Windows 11 x64.
+  * OBSBOT Tiny original conectada por USB.
+  * Nao precisa instalar o .NET: ele ja vai dentro dos executaveis.
+
+COMO ABRIR
+  * Zip: extraia a pasta e de dois cliques em opengimbalcam-studio.exe.
+  * Instalador: rode OpenGimbalCam-<versao>-win-x64-setup.exe (instala so
+    para o seu usuario, sem pedir administrador) e abra o Studio pelo
+    menu Iniciar.
+  * Os executaveis nao sao assinados digitalmente. Se o SmartScreen avisar
+    "O Windows protegeu o computador", clique em "Mais informacoes" e depois
+    em "Executar assim mesmo". Confira o arquivo pelo SHA256SUMS.txt:
+      Get-FileHash -Algorithm SHA256 <arquivo>
+
+ONDE FICAM OS ARQUIVOS
+  * Fotos:         Imagens\OpenGimbalCam Studio
+  * Videos:        Videos\OpenGimbalCam Studio
+  * Configuracoes: %APPDATA%\OpenGimbalCam Studio  (tamanho da janela, camera, aba)
+
+OSC E O OBSBOT CENTER
+  O servidor OSC do Studio (aba OSC) e o do OBSBOT Center usam a mesma
+  porta. Feche o OBSBOT Center antes de iniciar o OSC. Feche tambem
+  qualquer outro programa que esteja usando a camera.
+
+USO RAPIDO DA CLI
+  Abra o PowerShell na pasta do ogcctl.exe e rode:
+    .\ogcctl.exe list         lista as cameras encontradas
+    .\ogcctl.exe --version    mostra a versao
+    .\ogcctl.exe --help       mostra os comandos
+
+COMO DESINSTALAR
+  * Zip: apague a pasta.
+  * Instalador: Configuracoes > Aplicativos > OpenGimbalCam > Desinstalar.
+  Fotos, videos e configuracoes nao sao apagados.
+
+LICENCA E MARCAS
+  Licenca MIT (arquivo LICENSE). Componentes de terceiros: THIRD-PARTY-NOTICES.md
+  e pasta licenses. OBSBOT e Tiny sao marcas de seus titulares; este projeto
+  nao e afiliado nem endossado por eles (arquivo TRADEMARKS.md).
+
+Repositorio: https://github.com/alsimoes/opengimbalcam

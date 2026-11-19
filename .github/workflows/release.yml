@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  pull_request:
+    branches: [master]
+    paths: ['packaging/**', '.github/workflows/release.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AVALONIA_TELEMETRY_OPTOUT: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Check tag matches Directory.Build.props
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        run: |
+          [xml]$p = Get-Content Directory.Build.props
+          $v = @($p.Project.PropertyGroup.Version)[0]
+          if ("v$v" -ne '${{ github.ref_name }}') { throw "tag ${{ github.ref_name }} != Version $v" }
+      - run: dotnet test OpenGimbalCam.slnx -c Release
+      # Pins Inno Setup even if the runner image ships another version.
+      - run: choco upgrade innosetup --version=6.7.1 --no-progress -y --allow-downgrade
+      - name: Package
+        shell: pwsh
+        run: ./packaging/windows/build-release.ps1 -OutDir artifacts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: opengimbalcam-win-x64
+          path: |
+            artifacts/*.zip
+            artifacts/*-setup.exe
+            artifacts/SHA256SUMS.txt
+      - name: Create draft release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $files = (Get-ChildItem artifacts -File | Where-Object Name -match '\.(zip|exe)$|^SHA256SUMS').FullName
+          gh release create $tag $files --draft --verify-tag --title "OpenGimbalCam $($tag.TrimStart('v'))" --notes-file ".github/release-notes/$tag.md"
