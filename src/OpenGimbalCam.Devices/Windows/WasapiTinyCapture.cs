@@ -71,9 +71,9 @@ internal sealed class WasapiTinyCapture : IAudioCapture
     // Any string property of the endpoint (instance id, controller id, ...) that carries the Tiny VID/PID.
     private static bool IsTinyByHardwareId(MMDevice device)
     {
-        if (TinyIdentity.IsMatchDevicePath(Safe(() => device.Properties[PropertyKeys.PKEY_Device_InstanceId].Value as string)))
+        if (TinyIdentity.IsMatchDevicePath(Safe(() => device.Properties[PropertyKeys.PKEY_Device_InstanceId]?.Value as string)))
             return true;
-        if (TinyIdentity.IsMatchDevicePath(Safe(() => device.Properties[PropertyKeys.PKEY_Device_ControllerDeviceId].Value as string)))
+        if (TinyIdentity.IsMatchDevicePath(Safe(() => device.Properties[PropertyKeys.PKEY_Device_ControllerDeviceId]?.Value as string)))
             return true;
         return TinyIdentity.IsMatchDevicePath(device.ID);
     }
