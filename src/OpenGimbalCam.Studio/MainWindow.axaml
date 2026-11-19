@@ -1,169 +1,443 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:OpenGimbalCam.Studio.ViewModels"
-        xmlns:core="using:OpenGimbalCam.Core.Camera"
+        xmlns:c="using:OpenGimbalCam.Studio.Controls"
+        xmlns:cam="using:OpenGimbalCam.Core.Camera"
         x:Class="OpenGimbalCam.Studio.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="OpenGimbalCam Studio"
-        Width="1240" Height="900" MinWidth="900" MinHeight="640">
+        Icon="avares://opengimbalcam-studio/Assets/app.ico"
+        Width="1280" Height="800" MinWidth="1100" MinHeight="700"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource AppBg}">
 
-  <Window.Styles>
-    <Style Selector="TextBlock.section">
-      <Setter Property="FontSize" Value="16" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Margin" Value="0,4,0,4" />
-    </Style>
-    <Style Selector="TextBlock.hint">
-      <Setter Property="FontSize" Value="12" />
-      <Setter Property="Opacity" Value="0.7" />
-      <Setter Property="TextWrapping" Value="Wrap" />
-    </Style>
-    <Style Selector="Grid.dpad > Button">
-      <Setter Property="Width" Value="60" />
-      <Setter Property="Height" Value="60" />
-      <Setter Property="Margin" Value="3" />
-      <Setter Property="FontSize" Value="20" />
-      <Setter Property="HorizontalContentAlignment" Value="Center" />
-      <Setter Property="VerticalContentAlignment" Value="Center" />
-    </Style>
-    <Style Selector="Border.card">
-      <Setter Property="Background" Value="#14808080" />
-      <Setter Property="BorderBrush" Value="#30808080" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="8" />
-      <Setter Property="Padding" Value="14" />
-    </Style>
-  </Window.Styles>
+  <Window.KeyBindings>
+    <KeyBinding Gesture="F5" Command="{Binding RefreshCommand}"/>
+    <KeyBinding Gesture="F8" Command="{Binding SnapshotCommand}"/>
+    <KeyBinding Gesture="F9" Command="{Binding ToggleRecordingCommand}"/>
+    <KeyBinding Gesture="F11" Command="{Binding ToggleFocusModeCommand}"/>
+    <KeyBinding Gesture="Escape" Command="{Binding ExitFocusModeCommand}"/>
+    <KeyBinding Gesture="Ctrl+G" Command="{Binding ToggleGridCommand}"/>
+  </Window.KeyBindings>
 
-  <DockPanel Margin="14">
+  <Grid RowDefinitions="56,*,28">
 
-    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,12">
-      <TextBlock Text="Câmera" VerticalAlignment="Center" Margin="0,0,10,0" />
-      <ComboBox Grid.Column="1" HorizontalAlignment="Stretch"
-                ItemsSource="{Binding Cameras}" SelectedItem="{Binding SelectedCamera}">
-        <ComboBox.ItemTemplate>
-          <DataTemplate x:DataType="core:CameraInfo">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <TextBlock Text="{Binding Name}" />
-              <TextBlock Text="{Binding UsbId}" Opacity="0.6" />
+    <!-- App bar -->
+    <Border Grid.Row="0" Classes="appbar">
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="16,0">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Border Classes="brandmark"><c:Glyph Data="{DynamicResource IconCameraVideoFill}"/></Border>
+          <TextBlock Classes="brand" Text="OpenGimbalCam" VerticalAlignment="Center"/>
+          <TextBlock Classes="brandSub" Text="Studio" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="28,0,0,0" VerticalAlignment="Center">
+          <ComboBox x:Name="CameraBox" MinWidth="300" MaxWidth="420"
+                    ItemsSource="{Binding Cameras}" SelectedItem="{Binding SelectedCamera}"
+                    PlaceholderText="Nenhuma câmera encontrada">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="cam:CameraInfo">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <c:Glyph Classes="muted" Data="{DynamicResource IconCameraVideo}"/>
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                  <TextBlock Classes="mono muted" Text="{Binding UsbId}" VerticalAlignment="Center"/>
+                </StackPanel>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <Button Classes="icon" Command="{Binding RefreshCommand}" ToolTip.Tip="Atualizar a lista de câmeras (F5)">
+            <c:Glyph Data="{DynamicResource IconArrowClockwise}"/>
+          </Button>
+          <Border Classes="pill" ToolTip.Tip="{Binding Status}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Ellipse Classes="dot" Classes.ok="{Binding IsConnectedFull}" Classes.warn="{Binding IsConnectedUvcOnly}" VerticalAlignment="Center"/>
+              <TextBlock Text="{Binding ConnectionText}" FontSize="12" VerticalAlignment="Center"/>
             </StackPanel>
-          </DataTemplate>
-        </ComboBox.ItemTemplate>
-      </ComboBox>
-      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" Margin="10,0,0,0">
-        <Button Content="Atualizar" Command="{Binding RefreshCommand}" />
-        <Button Content="Sobre" Click="OnAbout" />
-      </StackPanel>
-    </Grid>
-
-    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
-      <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
-      <TextBlock Grid.Column="1" Classes="hint" Text="{Binding PlatformName}" Margin="12,0,0,0" />
-    </Grid>
-
-    <Grid ColumnDefinitions="320,*,360">
-
-      <!-- Gimbal / zoom / XU commands -->
-      <Border Classes="card" Grid.Column="0">
-        <ScrollViewer>
-          <StackPanel Spacing="10" IsEnabled="{Binding HasCamera}" Margin="0,0,16,0">
-            <TextBlock Classes="section" Text="Gimbal" />
-            <Grid Classes="dpad" RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,Auto,Auto"
-                  HorizontalAlignment="Center" IsEnabled="{Binding HasXu}">
-              <Button x:Name="UpButton" Grid.Row="0" Grid.Column="1" Content="▲" ToolTip.Tip="Segure para mover" />
-              <Button x:Name="LeftButton" Grid.Row="1" Grid.Column="0" Content="◀" ToolTip.Tip="Segure para mover" />
-              <Button Grid.Row="1" Grid.Column="1" Content="⌂" Command="{Binding HomeCommand}"
-                      ToolTip.Tip="Centralizar (pan/tilt absolutos = 0)" />
-              <Button x:Name="RightButton" Grid.Row="1" Grid.Column="2" Content="▶" ToolTip.Tip="Segure para mover" />
-              <Button x:Name="DownButton" Grid.Row="2" Grid.Column="1" Content="▼" ToolTip.Tip="Segure para mover" />
-            </Grid>
-            <TextBlock Text="{Binding Position}" HorizontalAlignment="Center" Classes="hint" />
-
-            <TextBlock Text="Velocidade" />
-            <Grid ColumnDefinitions="*,48">
-              <Slider Minimum="1" Maximum="100" Value="{Binding Speed}" />
-              <TextBlock Grid.Column="1" Text="{Binding Speed, StringFormat={}{0:0}}" VerticalAlignment="Center" HorizontalAlignment="Right" />
-            </Grid>
-
-            <TextBlock Classes="section" Text="Zoom" />
-            <Grid ColumnDefinitions="*,48">
-              <Slider Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding Zoom}" />
-              <TextBlock Grid.Column="1" Text="{Binding Zoom, StringFormat={}{0:0}%}" VerticalAlignment="Center" HorizontalAlignment="Right" />
-            </Grid>
-
-            <TextBlock Classes="section" Text="Campo de visão" />
-            <ComboBox ItemsSource="{Binding FovOptions}" SelectedIndex="{Binding FovIndex}"
-                      HorizontalAlignment="Stretch" PlaceholderText="(não lido da câmera)" IsEnabled="{Binding HasXu}" />
-            <ToggleSwitch Content="Espelhar imagem" IsChecked="{Binding Mirror}" IsEnabled="{Binding HasXu}" />
-
-            <TextBlock Classes="section" Text="Presets" />
-            <StackPanel Orientation="Horizontal" Spacing="6" IsEnabled="{Binding HasXu}">
-              <Button Content="1" Command="{Binding TriggerPresetCommand}" CommandParameter="1" Width="48" />
-              <Button Content="2" Command="{Binding TriggerPresetCommand}" CommandParameter="2" Width="48" />
-              <Button Content="3" Command="{Binding TriggerPresetCommand}" CommandParameter="3" Width="48" />
-            </StackPanel>
-            <TextBlock Classes="hint" Text="Presets via XU seletor 7 (modelos mais antigos); FOV e espelho via seletor 6." />
-          </StackPanel>
-        </ScrollViewer>
-      </Border>
-
-      <!-- Video preview + standard UVC controls -->
-      <Border Classes="card" Grid.Column="1" Margin="12,0">
-        <DockPanel>
-          <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto">
-            <TextBlock Classes="section" Text="Vídeo" />
-            <TextBlock Grid.Column="1" Classes="hint" Text="{Binding PreviewInfo}" VerticalAlignment="Center" Margin="12,0" TextTrimming="CharacterEllipsis" />
-            <ToggleSwitch Grid.Column="2" IsChecked="{Binding PreviewEnabled}" OnContent="Ligado" OffContent="Desligado" />
-          </Grid>
-          <Border DockPanel.Dock="Top" Background="Black" CornerRadius="6" Height="320" Margin="0,4,0,4" ClipToBounds="True">
-            <Image Source="{Binding Frame}" Stretch="Uniform" />
           </Border>
-          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
-            <Button Content="📷 Foto" Command="{Binding SnapshotCommand}" ToolTip.Tip="Salva o quadro atual em Imagens/OpenGimbalCam Studio (OSC PCSnapshot)" />
-            <Button Content="{Binding RecordButtonText}" Command="{Binding ToggleRecordingCommand}" ToolTip.Tip="Grava AVI MJPEG em Vídeos/OpenGimbalCam Studio (OSC SetPCRecording)" />
-          </StackPanel>
-          <TextBlock DockPanel.Dock="Top" Classes="section" Text="Imagem (controles UVC)" />
-          <ScrollViewer>
-            <ItemsControl ItemsSource="{Binding Controls}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:ControlViewModel">
-                  <Grid ColumnDefinitions="Auto,*,56,70" Margin="0,2">
-                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" MinWidth="170" />
-                    <Slider Grid.Column="1" Minimum="{Binding Min}" Maximum="{Binding Max}"
-                            TickFrequency="{Binding Step}" IsSnapToTickEnabled="True"
-                            Value="{Binding Value}" IsEnabled="{Binding !Auto}" />
-                    <TextBlock Grid.Column="2" Text="{Binding ValueText}" VerticalAlignment="Center" HorizontalAlignment="Right" />
-                    <CheckBox Grid.Column="3" Content="Auto" IsChecked="{Binding Auto}" IsVisible="{Binding HasAuto}" Margin="10,0,0,0" />
-                  </Grid>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
-        </DockPanel>
-      </Border>
+        </StackPanel>
 
-      <!-- OSC server -->
-      <Border Classes="card" Grid.Column="2">
-        <DockPanel>
-          <StackPanel DockPanel.Dock="Top" Spacing="8">
-            <TextBlock Classes="section" Text="Servidor OSC" />
-            <TextBlock Classes="hint"
-                       Text="Protocolo /OBSBOT/WebCam/* do OBSBOT Center: TouchOSC, Bitfocus Companion, Stream Deck. Feche o OBSBOT Center antes (mesma porta)." />
-            <StackPanel Orientation="Horizontal" Spacing="10" IsEnabled="{Binding !OscRunning}">
-              <TextBlock Text="Porta" VerticalAlignment="Center" />
-              <NumericUpDown Value="{Binding OscPort}" Minimum="1" Maximum="65535" Increment="1" FormatString="0" Width="140" />
-              <CheckBox Content="UDP" IsChecked="{Binding OscUdp}" />
-              <CheckBox Content="TCP" IsChecked="{Binding OscTcp}" />
+        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+          <Button Classes="ghost" Command="{Binding ShowOscCommand}" Padding="10,4" ToolTip.Tip="Servidor OSC">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Ellipse Classes="dot" Classes.ok="{Binding OscRunning}" VerticalAlignment="Center"/>
+              <c:Glyph Data="{DynamicResource IconBroadcast}"/>
+              <TextBlock Text="{Binding OscStatusText}" FontSize="12" VerticalAlignment="Center"/>
             </StackPanel>
-            <CheckBox Content="Compatibilidade com o protocolo OSC do OBSBOT Center" IsChecked="{Binding OscObsbotCompatibility}"
-                      ToolTip.Tip="Ligada (padrão): responde às mensagens /OBSBOT/WebCam/*. Desligada: elas são ignoradas. Pode ser alterada com o servidor rodando." />
-            <Button Content="{Binding OscButtonText}" Command="{Binding ToggleOscCommand}" HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center" />
-          </StackPanel>
-          <ListBox ItemsSource="{Binding Log}" Margin="0,10,0,0" FontFamily="Cascadia Mono,Consolas,DejaVu Sans Mono,monospace" FontSize="11" />
-        </DockPanel>
-      </Border>
+          </Button>
+          <Button Classes="icon" ToolTip.Tip="Atalhos de teclado">
+            <c:Glyph Data="{DynamicResource IconKeyboard}"/>
+            <Button.Flyout>
+              <Flyout Placement="BottomEdgeAlignedRight">
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="6">
+                  <TextBlock Grid.ColumnSpan="2" Classes="title" Text="Atalhos de teclado" Margin="0,0,0,4"/>
+                  <TextBlock Grid.Row="1" Classes="mono" Text="← ↑ → ↓"/>
+                  <TextBlock Grid.Row="1" Grid.Column="1" Classes="muted" Text="Mover o gimbal (segure)"/>
+                  <TextBlock Grid.Row="2" Classes="mono" Text="Home"/>
+                  <TextBlock Grid.Row="2" Grid.Column="1" Classes="muted" Text="Centralizar"/>
+                  <TextBlock Grid.Row="3" Classes="mono" Text="+  /  −"/>
+                  <TextBlock Grid.Row="3" Grid.Column="1" Classes="muted" Text="Aproximar / afastar"/>
+                  <TextBlock Grid.Row="4" Classes="mono" Text="F5"/>
+                  <TextBlock Grid.Row="4" Grid.Column="1" Classes="muted" Text="Atualizar câmeras"/>
+                  <TextBlock Grid.Row="5" Classes="mono" Text="F8  /  F9"/>
+                  <TextBlock Grid.Row="5" Grid.Column="1" Classes="muted" Text="Foto / gravar ou parar"/>
+                  <TextBlock Grid.Row="6" Classes="mono" Text="F11  /  Esc"/>
+                  <TextBlock Grid.Row="6" Grid.Column="1" Classes="muted" Text="Entrar / sair do modo foco"/>
+                  <TextBlock Grid.Row="7" Classes="mono" Text="Ctrl+G"/>
+                  <TextBlock Grid.Row="7" Grid.Column="1" Classes="muted" Text="Grade de composição"/>
+                </Grid>
+              </Flyout>
+            </Button.Flyout>
+          </Button>
+          <Button Classes="icon" Click="OnAbout" ToolTip.Tip="Sobre">
+            <c:Glyph Data="{DynamicResource IconInfoCircle}"/>
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Border>
 
+    <!-- Workspace -->
+    <Grid Grid.Row="1" Margin="12" ColumnDefinitions="*,Auto">
+      <Grid Grid.Column="0" RowDefinitions="*,Auto">
+
+        <!-- Video -->
+        <Border Grid.Row="0" Classes="panel" ClipToBounds="True">
+          <Grid RowDefinitions="*,Auto">
+            <Border x:Name="Stage" Grid.Row="0" Classes="stage" DoubleTapped="OnStageDoubleTapped">
+              <Panel>
+                <Viewbox Stretch="Uniform" IsVisible="{Binding HasFrame}">
+                  <Panel>
+                    <Image Source="{Binding Frame}" RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                    <Grid IsVisible="{Binding ShowGrid}" IsHitTestVisible="False" ColumnDefinitions="*,*,*" RowDefinitions="*,*,*">
+                      <Rectangle Grid.Column="1" Grid.RowSpan="3" Width="2" Fill="#66FFFFFF" HorizontalAlignment="Left"/>
+                      <Rectangle Grid.Column="2" Grid.RowSpan="3" Width="2" Fill="#66FFFFFF" HorizontalAlignment="Left"/>
+                      <Rectangle Grid.Row="1" Grid.ColumnSpan="3" Height="2" Fill="#66FFFFFF" VerticalAlignment="Top"/>
+                      <Rectangle Grid.Row="2" Grid.ColumnSpan="3" Height="2" Fill="#66FFFFFF" VerticalAlignment="Top"/>
+                    </Grid>
+                  </Panel>
+                </Viewbox>
+
+                <StackPanel IsVisible="{Binding !HasFrame}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+                  <c:Glyph Classes="muted" Width="44" Height="44" HorizontalAlignment="Center" Data="{DynamicResource IconCameraVideoOff}"/>
+                  <TextBlock Classes="title" Text="{Binding StageTitle}" HorizontalAlignment="Center"/>
+                  <TextBlock Classes="muted" Text="{Binding StageDetail}" MaxWidth="360" TextWrapping="Wrap"
+                             TextAlignment="Center" HorizontalAlignment="Center"/>
+                  <Button Classes="primary" Content="Ligar vídeo" HorizontalAlignment="Center" Margin="0,6,0,0"
+                          Command="{Binding TurnOnPreviewCommand}" IsVisible="{Binding CanTurnOnPreview}"/>
+                </StackPanel>
+
+                <Border Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12" IsVisible="{Binding HasFrame}">
+                  <TextBlock Classes="mono" Text="{Binding PreviewInfo}" Foreground="{DynamicResource TextPrimary}"/>
+                </Border>
+                <Border Classes="recBadge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" IsVisible="{Binding IsRecording}">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Ellipse Classes="recDot" VerticalAlignment="Center"/>
+                    <TextBlock Text="REC" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center"/>
+                    <TextBlock Classes="mono" Text="{Binding RecordingElapsed}" Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+                <Border x:Name="FlashOverlay" Background="White" Opacity="0" IsHitTestVisible="False"/>
+              </Panel>
+            </Border>
+
+            <Border Grid.Row="1" Classes="transport">
+              <Grid ColumnDefinitions="*,Auto,*">
+                <ToggleSwitch Grid.Column="0" IsChecked="{Binding PreviewEnabled}" IsEnabled="{Binding HasCamera}"
+                              OnContent="Vídeo ligado" OffContent="Vídeo desligado" VerticalAlignment="Center"/>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                  <Button Classes="shutter" Command="{Binding SnapshotCommand}" IsEnabled="{Binding IsPreviewLive}" ToolTip.Tip="Tirar foto (F8)">
+                    <c:Glyph Width="20" Height="20" Data="{DynamicResource IconCamera}"/>
+                  </Button>
+                  <Button Classes="record" Classes.recording="{Binding IsRecording}" Command="{Binding ToggleRecordingCommand}"
+                          IsEnabled="{Binding IsPreviewLive}" ToolTip.Tip="Gravar ou parar (F9)">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <c:Glyph Data="{DynamicResource IconRecordFill}" IsVisible="{Binding !IsRecording}"/>
+                      <c:Glyph Data="{DynamicResource IconStopFill}" IsVisible="{Binding IsRecording}"/>
+                      <TextBlock Text="{Binding RecordButtonText}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                      <TextBlock Classes="mono" Text="{Binding RecordingElapsed}" IsVisible="{Binding IsRecording}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </Button>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Center">
+                  <ToggleButton Classes="icon" IsChecked="{Binding ShowGrid}" ToolTip.Tip="Grade de composição (Ctrl+G)">
+                    <c:Glyph Data="{DynamicResource IconGrid3x3}"/>
+                  </ToggleButton>
+                  <Button Classes="icon" ToolTip.Tip="Abrir pastas de mídia">
+                    <c:Glyph Data="{DynamicResource IconFolder2Open}"/>
+                    <Button.Flyout>
+                      <MenuFlyout Placement="TopEdgeAlignedRight">
+                        <MenuItem Header="Abrir pasta de fotos" Click="OnOpenPhotos"/>
+                        <MenuItem Header="Abrir pasta de vídeos" Click="OnOpenVideos"/>
+                      </MenuFlyout>
+                    </Button.Flyout>
+                  </Button>
+                  <ToggleButton Classes="icon" IsChecked="{Binding IsFocusMode}" ToolTip.Tip="Modo foco (F11)">
+                    <Panel>
+                      <c:Glyph Data="{DynamicResource IconFullscreen}" IsVisible="{Binding !IsFocusMode}"/>
+                      <c:Glyph Data="{DynamicResource IconFullscreenExit}" IsVisible="{Binding IsFocusMode}"/>
+                    </Panel>
+                  </ToggleButton>
+                </StackPanel>
+              </Grid>
+            </Border>
+          </Grid>
+        </Border>
+
+        <!-- Motion deck -->
+        <Border Grid.Row="1" Classes="panel" Margin="0,12,0,0" IsVisible="{Binding !IsFocusMode}" IsEnabled="{Binding HasCamera}">
+          <Grid Margin="16,12" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto">
+
+            <StackPanel Grid.Column="0" Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <c:Glyph Classes="muted" Width="14" Height="14" Data="{DynamicResource IconArrowsMove}"/>
+                <TextBlock Classes="caption" Text="GIMBAL" VerticalAlignment="Center"/>
+                <c:Glyph Width="12" Height="12" Foreground="{DynamicResource Warning}" IsVisible="{Binding ShowGimbalHint}"
+                         Data="{DynamicResource IconExclamationTriangleFill}" ToolTip.Tip="O gimbal só responde com o vídeo ligado"/>
+              </StackPanel>
+              <Grid Classes="pad" ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto" IsEnabled="{Binding HasXu}"
+                    ToolTip.Tip="Segure para mover (setas do teclado)">
+                <Button x:Name="UpButton" Grid.Row="0" Grid.Column="1"><c:Glyph Data="{DynamicResource IconChevronUp}"/></Button>
+                <Button x:Name="LeftButton" Grid.Row="1" Grid.Column="0"><c:Glyph Data="{DynamicResource IconChevronLeft}"/></Button>
+                <Button Classes="home" Grid.Row="1" Grid.Column="1" Command="{Binding HomeCommand}" ToolTip.Tip="Centralizar (Home)">
+                  <c:Glyph Data="{DynamicResource IconBullseye}"/>
+                </Button>
+                <Button x:Name="RightButton" Grid.Row="1" Grid.Column="2"><c:Glyph Data="{DynamicResource IconChevronRight}"/></Button>
+                <Button x:Name="DownButton" Grid.Row="2" Grid.Column="1"><c:Glyph Data="{DynamicResource IconChevronDown}"/></Button>
+              </Grid>
+            </StackPanel>
+
+            <Border Grid.Column="1" Classes="vdivider"/>
+
+            <StackPanel Grid.Column="2" Width="140" Spacing="8" VerticalAlignment="Center">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="caption" Text="PAN" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Classes="readout" Text="{Binding PanText}"/>
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="caption" Text="TILT" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Classes="readout" Text="{Binding TiltText}"/>
+              </Grid>
+              <Grid ColumnDefinitions="Auto,*,Auto" ToolTip.Tip="Velocidade do gimbal">
+                <c:Glyph Classes="muted" Width="14" Height="14" Data="{DynamicResource IconSpeedometer}"/>
+                <Slider Grid.Column="1" Minimum="1" Maximum="100" Value="{Binding Speed}" Margin="6,0"/>
+                <TextBlock Grid.Column="2" Classes="value" Text="{Binding Speed, StringFormat={}{0:0}%}" MinWidth="40"/>
+              </Grid>
+            </StackPanel>
+
+            <Border Grid.Column="3" Classes="vdivider"/>
+
+            <StackPanel Grid.Column="4" MinWidth="220" Spacing="10" VerticalAlignment="Center">
+              <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                <Button Classes="icon" Command="{Binding ZoomOutCommand}" ToolTip.Tip="Afastar (−)">
+                  <c:Glyph Data="{DynamicResource IconZoomOut}"/>
+                </Button>
+                <Slider Grid.Column="1" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding Zoom}" Margin="4,0"/>
+                <Button Grid.Column="2" Classes="icon" Command="{Binding ZoomInCommand}" ToolTip.Tip="Aproximar (+)">
+                  <c:Glyph Data="{DynamicResource IconZoomIn}"/>
+                </Button>
+                <TextBlock Grid.Column="3" Classes="value" Text="{Binding Zoom, StringFormat={}{0:0}%}" VerticalAlignment="Center"/>
+              </Grid>
+              <StackPanel Orientation="Horizontal" Spacing="10" IsEnabled="{Binding HasXu}">
+                <c:Glyph Classes="muted" Data="{DynamicResource IconAspectRatio}" VerticalAlignment="Center"/>
+                <ListBox Classes="segmented" Width="132" ItemsSource="{Binding FovOptions}" SelectedIndex="{Binding FovIndex}"
+                         ToolTip.Tip="Campo de visão: 86° amplo, 78° médio, 65° fechado"/>
+                <ToggleButton Classes="ghost" IsChecked="{Binding Mirror}" ToolTip.Tip="Espelhar a imagem">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <c:Glyph Data="{DynamicResource IconSymmetryVertical}"/>
+                    <TextBlock Text="Espelhar" VerticalAlignment="Center"/>
+                  </StackPanel>
+                </ToggleButton>
+              </StackPanel>
+            </StackPanel>
+
+            <Border Grid.Column="5" Classes="vdivider"/>
+
+            <StackPanel Grid.Column="6" Spacing="6" IsEnabled="{Binding HasXu}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <c:Glyph Classes="muted" Width="14" Height="14" Data="{DynamicResource IconBookmarkStar}"/>
+                <TextBlock Classes="caption" Text="PRESETS" VerticalAlignment="Center"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <Button Classes="preset" Content="1" Command="{Binding TriggerPresetCommand}" CommandParameter="1" ToolTip.Tip="Ir para o preset 1 (XU seletor 7)"/>
+                <Button Classes="preset" Content="2" Command="{Binding TriggerPresetCommand}" CommandParameter="2" ToolTip.Tip="Ir para o preset 2 (XU seletor 7)"/>
+                <Button Classes="preset" Content="3" Command="{Binding TriggerPresetCommand}" CommandParameter="3" ToolTip.Tip="Ir para o preset 3 (XU seletor 7)"/>
+              </StackPanel>
+            </StackPanel>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <!-- Inspector -->
+      <Border Grid.Column="1" Classes="panel" Width="320" Margin="12,0,0,0" IsVisible="{Binding !IsFocusMode}">
+        <TabControl SelectedIndex="{Binding InspectorTabIndex}">
+
+          <TabItem>
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal">
+                <c:Glyph Width="14" Height="14" Data="{DynamicResource IconSliders}"/>
+                <TextBlock Text="Imagem"/>
+              </StackPanel>
+            </TabItem.Header>
+            <DockPanel Margin="16,12,16,16">
+              <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                <TextBlock Classes="title" Text="Ajustes de imagem" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Classes="ghost" Padding="8,4" Command="{Binding RestoreImageDefaultsCommand}" IsEnabled="{Binding HasCamera}"
+                        ToolTip.Tip="Restaurar todos os ajustes ao padrão da câmera">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <c:Glyph Width="14" Height="14" Data="{DynamicResource IconArrowCounterclockwise}"/>
+                    <TextBlock Text="Restaurar tudo" FontSize="12" VerticalAlignment="Center"/>
+                  </StackPanel>
+                </Button>
+              </Grid>
+              <TextBlock DockPanel.Dock="Top" Classes="muted" Text="Conecte uma câmera para ajustar a imagem." IsVisible="{Binding !HasCamera}"/>
+              <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding ControlGroups}" Margin="0,0,10,0">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ControlGroupViewModel">
+                      <StackPanel>
+                        <TextBlock Classes="caption" Text="{Binding Title}" Margin="0,14,0,6"/>
+                        <ItemsControl ItemsSource="{Binding Items}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ControlViewModel">
+                              <StackPanel Margin="0,0,0,6">
+                                <Grid ColumnDefinitions="Auto,*,Auto,24,22" ColumnSpacing="2" Height="22">
+                                  <c:Glyph Classes="muted" Width="14" Height="14" Data="{Binding IconKey, Converter={x:Static c:IconKeyConverter.Instance}}"/>
+                                  <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="12" Margin="6,0" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                  <TextBlock Grid.Column="2" Classes="value" Text="{Binding DisplayValue}" VerticalAlignment="Center"/>
+                                  <ToggleButton Grid.Column="3" Classes="chip" Content="A" IsChecked="{Binding Auto}" IsVisible="{Binding HasAuto}"
+                                                ToolTip.Tip="Automático"/>
+                                  <Button Grid.Column="4" Classes="icon mini" Command="{Binding ResetCommand}" IsVisible="{Binding IsModified}"
+                                          HorizontalAlignment="Right" ToolTip.Tip="Restaurar o padrão">
+                                    <c:Glyph Width="12" Height="12" Data="{DynamicResource IconArrowCounterclockwise}"/>
+                                  </Button>
+                                </Grid>
+                                <Slider Minimum="{Binding Min}" Maximum="{Binding Max}" TickFrequency="{Binding Step}" IsSnapToTickEnabled="True"
+                                        Value="{Binding Value}" IsVisible="{Binding IsSlider}" IsEnabled="{Binding !Auto}"/>
+                                <ListBox Classes="segmented" ItemsSource="{Binding Options}" SelectedIndex="{Binding SelectedOption}"
+                                         IsVisible="{Binding IsOptions}" IsEnabled="{Binding !Auto}" Margin="0,4,0,0"/>
+                                <ToggleSwitch IsChecked="{Binding ToggleValue}" OnContent="" OffContent="" IsVisible="{Binding IsToggle}"
+                                              IsEnabled="{Binding !Auto}"/>
+                              </StackPanel>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </TabItem>
+
+          <TabItem>
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal">
+                <c:Glyph Width="14" Height="14" Data="{DynamicResource IconBroadcast}"/>
+                <TextBlock Text="OSC"/>
+              </StackPanel>
+            </TabItem.Header>
+            <ScrollViewer>
+              <StackPanel Margin="16,12" Spacing="12">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Classes="title" Text="Servidor OSC" VerticalAlignment="Center"/>
+                  <Border Grid.Column="1" Classes="pill">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Ellipse Classes="dot" Classes.ok="{Binding OscRunning}" VerticalAlignment="Center"/>
+                      <TextBlock Classes="mono" Text="{Binding OscStateText}" FontSize="11" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </Border>
+                </Grid>
+                <TextBlock Classes="muted" TextWrapping="Wrap"
+                           Text="Controle a câmera pelo TouchOSC, Bitfocus Companion ou Stream Deck com o protocolo /OBSBOT/WebCam/* do OBSBOT Center. Feche o OBSBOT Center antes: os dois usam a mesma porta."/>
+                <Border Classes="card" IsEnabled="{Binding !OscRunning}">
+                  <StackPanel Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="Porta" VerticalAlignment="Center"/>
+                      <NumericUpDown Grid.Column="1" Width="140" Minimum="1" Maximum="65535" FormatString="0" Value="{Binding OscPort}"/>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="Transporte" VerticalAlignment="Center"/>
+                      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                        <CheckBox Content="UDP" IsChecked="{Binding OscUdp}"/>
+                        <CheckBox Content="TCP" IsChecked="{Binding OscTcp}"/>
+                      </StackPanel>
+                    </Grid>
+                  </StackPanel>
+                </Border>
+                <Border Classes="card">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="Compatibilidade com o OBSBOT Center" TextWrapping="Wrap"/>
+                      <TextBlock Classes="muted" TextWrapping="Wrap" Text="Aceita também as mensagens do protocolo OSC do fabricante. Pode mudar com o servidor em execução."/>
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1" IsChecked="{Binding OscObsbotCompatibility}" OnContent="" OffContent="" VerticalAlignment="Top" Margin="8,0,0,0"/>
+                  </Grid>
+                </Border>
+                <Button Classes="primary" Classes.danger="{Binding OscRunning}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        Command="{Binding ToggleOscCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <c:Glyph Data="{DynamicResource IconPlayFill}" IsVisible="{Binding !OscRunning}"/>
+                    <c:Glyph Data="{DynamicResource IconStopFill}" IsVisible="{Binding OscRunning}"/>
+                    <TextBlock Text="{Binding OscButtonText}" VerticalAlignment="Center"/>
+                  </StackPanel>
+                </Button>
+                <Button Classes="ghost" Content="Ver atividade" HorizontalAlignment="Center" Command="{Binding ShowActivityCommand}"/>
+              </StackPanel>
+            </ScrollViewer>
+          </TabItem>
+
+          <TabItem>
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal">
+                <c:Glyph Width="14" Height="14" Data="{DynamicResource IconActivity}"/>
+                <TextBlock Text="Atividade"/>
+              </StackPanel>
+            </TabItem.Header>
+            <DockPanel Margin="12">
+              <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" Margin="4,0,0,8">
+                <TextBlock Classes="title" Text="Atividade" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Classes="icon" Click="OnCopyLog" ToolTip.Tip="Copiar tudo">
+                  <c:Glyph Data="{DynamicResource IconClipboard}"/>
+                </Button>
+                <Button Grid.Column="2" Classes="icon" Command="{Binding ClearLogCommand}" ToolTip.Tip="Limpar">
+                  <c:Glyph Data="{DynamicResource IconTrash}"/>
+                </Button>
+              </Grid>
+              <ListBox x:Name="ActivityList" Classes="log" ItemsSource="{Binding Log}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:LogEntry">
+                    <Grid ColumnDefinitions="Auto,*">
+                      <TextBlock Classes="mono muted" Text="{Binding Time}" FontSize="11" Margin="0,0,8,0"/>
+                      <TextBlock Grid.Column="1" Classes="mono" Classes.error="{Binding IsError}" Text="{Binding Text}" FontSize="11" TextWrapping="Wrap"/>
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </DockPanel>
+          </TabItem>
+        </TabControl>
+      </Border>
     </Grid>
-  </DockPanel>
+
+    <!-- Status bar -->
+    <Border Grid.Row="2" Classes="statusbar">
+      <Grid ColumnDefinitions="Auto,*,Auto" Margin="12,0">
+        <Panel Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,8,0">
+          <c:Glyph Width="14" Height="14" Foreground="{DynamicResource Success}" IsVisible="{Binding IsStatusSuccess}" Data="{DynamicResource IconCheckCircleFill}"/>
+          <c:Glyph Width="14" Height="14" Foreground="{DynamicResource DangerText}" IsVisible="{Binding IsStatusError}" Data="{DynamicResource IconExclamationTriangleFill}"/>
+          <c:Glyph Classes="muted" Width="14" Height="14" IsVisible="{Binding IsStatusInfo}" Data="{DynamicResource IconInfoCircle}"/>
+        </Panel>
+        <TextBlock Grid.Column="1" Text="{Binding Status}" FontSize="12" Foreground="{DynamicResource TextSecondary}"
+                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <TextBlock Classes="mono muted" FontSize="11" Text="{Binding PreviewInfo}"/>
+          <TextBlock Classes="mono muted" FontSize="11" Text="·"/>
+          <TextBlock Classes="mono muted" FontSize="11" Text="{Binding PlatformName}"/>
+          <TextBlock Classes="mono muted" FontSize="11" Text="·"/>
+          <TextBlock Classes="mono muted" FontSize="11" Text="{Binding AppVersionText}"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
 </Window>

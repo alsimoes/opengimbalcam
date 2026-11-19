@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>ogcctl</AssemblyName>
+    <ApplicationIcon>..\OpenGimbalCam.Studio\Assets\app.ico</ApplicationIcon>
     <RootNamespace>OpenGimbalCam.Cli</RootNamespace>
   </PropertyGroup>
 

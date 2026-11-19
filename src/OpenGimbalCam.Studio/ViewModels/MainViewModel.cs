@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using Avalonia.Media.Imaging;
@@ -11,23 +13,33 @@ using OpenGimbalCam.Osc.Bridge;
 
 namespace OpenGimbalCam.Studio.ViewModels;
 
-public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposable
+public sealed partial class MainViewModel : ObservableObject, IPcMedia, IAsyncDisposable
 {
     private const int MaxLogLines = 500;
+    private const int ErrorNoticeIntervalMs = 3000;
 
     // Gimbal, zoom and FOV have their own widgets; the relative ranges only scale speeds.
     private static readonly HashSet<CameraControl> GimbalControls =
         [CameraControl.Pan, CameraControl.Tilt, CameraControl.Zoom, CameraControl.PanRelative, CameraControl.TiltRelative];
 
     private readonly ICameraPlatform _platform;
+    private readonly string? _preferredCameraPath;
     private ObsbotCamera? _camera;
     private bool _loading;
     private bool _moving;
     private ObsbotCameraHub? _oscHub;
+    private OscBridge? _oscBridge;
     private readonly List<OscServer> _oscServers = [];
     private CameraPreview? _preview;
     private int _previewGeneration;
     private Bitmap? _previousFrame;
+    private DispatcherTimer? _recordTimer;
+    private DispatcherTimer? _positionTimer;
+    private readonly Stopwatch _recordWatch = new();
+    private int _oscRunningPort;
+    private string _oscRunningTransports = "";
+    private string? _lastErrorText;
+    private long _lastErrorTick;
 
     [ObservableProperty]
     private Bitmap? _frame;
@@ -43,19 +55,43 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
     private bool _isRecording;
 
     [ObservableProperty]
+    private string _recordingElapsed = FormatElapsed(TimeSpan.Zero);
+
+    [ObservableProperty]
     private CameraInfo? _selectedCamera;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStatusError))]
+    [NotifyPropertyChangedFor(nameof(IsStatusSuccess))]
+    [NotifyPropertyChangedFor(nameof(IsStatusInfo))]
+    private StatusKind _statusKind;
 
     [ObservableProperty]
     private string _status = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConnectedFull))]
+    [NotifyPropertyChangedFor(nameof(IsConnectedUvcOnly))]
+    [NotifyPropertyChangedFor(nameof(ConnectionText))]
     private bool _hasCamera;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConnectedFull))]
+    [NotifyPropertyChangedFor(nameof(IsConnectedUvcOnly))]
+    [NotifyPropertyChangedFor(nameof(ConnectionText))]
     private bool _hasXu;
 
     [ObservableProperty]
-    private string _position = "";
+    private PreviewState _previewState;
+
+    [ObservableProperty]
+    private string _previewError = "";
+
+    [ObservableProperty]
+    private string _panText = UiText.NoPosition;
+
+    [ObservableProperty]
+    private string _tiltText = UiText.NoPosition;
 
     [ObservableProperty]
     private double _speed = 50;
@@ -70,6 +106,15 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
     private bool _mirror;
 
     [ObservableProperty]
+    private int _inspectorTabIndex;
+
+    [ObservableProperty]
+    private bool _isFocusMode;
+
+    [ObservableProperty]
+    private bool _showGrid;
+
+    [ObservableProperty]
     private decimal? _oscPort = OscServer.DefaultPort;
 
     [ObservableProperty]
@@ -82,7 +127,151 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
     [ObservableProperty]
     private bool _oscObsbotCompatibility = true;
 
-    private OscBridge? _oscBridge;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(OscButtonText))]
+    [NotifyPropertyChangedFor(nameof(OscStatusText))]
+    [NotifyPropertyChangedFor(nameof(OscStateText))]
+    private bool _oscRunning;
+
+    public MainViewModel(ICameraPlatform platform, StudioSettings? settings = null)
+    {
+        _platform = platform;
+        if (settings is not null)
+        {
+            PreviewEnabled = settings.PreviewEnabled;
+            Speed = Math.Clamp(settings.Speed, 1, 100);
+            OscPort = settings.OscPort;
+            OscUdp = settings.OscUdp;
+            OscTcp = settings.OscTcp;
+            OscObsbotCompatibility = settings.OscObsbotCompatibility;
+            InspectorTabIndex = Math.Clamp(settings.InspectorTab, 0, 2);
+            ShowGrid = settings.ShowGrid;
+            _preferredCameraPath = settings.CameraPath;
+        }
+        Refresh();
+    }
+
+    public ObservableCollection<CameraInfo> Cameras { get; } = [];
+
+    public ObservableCollection<ControlViewModel> Controls { get; } = [];
+
+    public ObservableCollection<ControlGroupViewModel> ControlGroups { get; } = [];
+
+    public ObservableCollection<LogEntry> Log { get; } = [];
+
+    /// <summary>OSC SetView / libdev cameraSetFovU values 0, 1, 2.</summary>
+    public IReadOnlyList<string> FovOptions { get; } = ["86°", "78°", "65°"];
+
+    public string PlatformName => _platform.Name;
+
+    public string AppVersionText => "v" + AppInfo.Version;
+
+    public string PhotosFolder => MediaFolder(Environment.SpecialFolder.MyPictures);
+
+    public string VideosFolder => MediaFolder(Environment.SpecialFolder.MyVideos);
+
+    public string OscButtonText => OscRunning ? UiText.OscStop : UiText.OscStart;
+
+    public string OscStatusText => OscRunning ? UiText.OscStatus(_oscRunningPort) : UiText.OscOff;
+
+    public string OscStateText => OscRunning ? UiText.OscState(_oscRunningTransports, _oscRunningPort) : UiText.OscStopped;
+
+    public string RecordButtonText => IsRecording ? UiText.StopRecord : UiText.Record;
+
+    public bool IsConnectedFull => HasCamera && HasXu;
+
+    public bool IsConnectedUvcOnly => HasCamera && !HasXu;
+
+    public string ConnectionText => IsConnectedFull ? UiText.Connected : IsConnectedUvcOnly ? UiText.UvcOnly : UiText.Disconnected;
+
+    public bool IsStatusError => StatusKind == StatusKind.Error;
+
+    public bool IsStatusSuccess => StatusKind == StatusKind.Success;
+
+    public bool IsStatusInfo => StatusKind is StatusKind.Info or StatusKind.Warning;
+
+    public bool HasFrame => Frame is not null;
+
+    public bool IsPreviewLive => PreviewState == PreviewState.Live;
+
+    public bool CanTurnOnPreview => HasCamera && PreviewState == PreviewState.Off;
+
+    /// <summary>The gimbal only responds while the camera streams video.</summary>
+    public bool ShowGimbalHint => HasXu && !IsPreviewLive;
+
+    public string StageTitle => !HasCamera ? UiText.NoCameraTitle
+        : PreviewState switch
+        {
+            PreviewState.Off => UiText.PreviewOffTitle,
+            PreviewState.Opening => UiText.PreviewOpening,
+            PreviewState.Failed => UiText.PreviewFailedTitle,
+            _ => UiText.PreviewWaiting,
+        };
+
+    public string StageDetail => !HasCamera ? UiText.NoCameraDetail
+        : PreviewState switch
+        {
+            PreviewState.Off => UiText.PreviewOffDetail,
+            PreviewState.Failed => PreviewError,
+            _ => "",
+        };
+
+    /// <summary>Raised for saved photos/recordings and errors; the window shows them as toasts.</summary>
+    public event EventHandler<StudioNotice>? Notice;
+
+    public event EventHandler? SnapshotTaken;
+
+    public static string FormatElapsed(TimeSpan t) =>
+        string.Create(CultureInfo.InvariantCulture, $"{(int)t.TotalHours:00}:{t.Minutes:00}:{t.Seconds:00}");
+
+    public static string MediaFolder(Environment.SpecialFolder folder)
+    {
+        string root = Environment.GetFolderPath(folder);
+        if (string.IsNullOrEmpty(root))
+            root = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(root, "OpenGimbalCam Studio");
+    }
+
+    /// <summary>Copies the state worth persisting between runs.</summary>
+    public void CaptureSettings(StudioSettings s)
+    {
+        s.CameraPath = SelectedCamera?.Path;
+        s.PreviewEnabled = PreviewEnabled;
+        s.Speed = Speed;
+        s.OscPort = (int)(OscPort ?? OscServer.DefaultPort);
+        s.OscUdp = OscUdp;
+        s.OscTcp = OscTcp;
+        s.OscObsbotCompatibility = OscObsbotCompatibility;
+        s.InspectorTab = InspectorTabIndex;
+        s.ShowGrid = ShowGrid;
+    }
+
+    private void NotifyStage()
+    {
+        OnPropertyChanged(nameof(StageTitle));
+        OnPropertyChanged(nameof(StageDetail));
+        OnPropertyChanged(nameof(CanTurnOnPreview));
+        OnPropertyChanged(nameof(IsPreviewLive));
+        OnPropertyChanged(nameof(ShowGimbalHint));
+    }
+
+    partial void OnHasCameraChanged(bool value) => NotifyStage();
+
+    partial void OnHasXuChanged(bool value) => NotifyStage();
+
+    partial void OnPreviewStateChanged(PreviewState value) => NotifyStage();
+
+    partial void OnPreviewErrorChanged(string value) => NotifyStage();
+
+    partial void OnFrameChanged(Bitmap? oldValue, Bitmap? newValue)
+    {
+        // The frame changes ~30 times per second; only its presence matters to the stage.
+        if ((oldValue is null) != (newValue is null))
+        {
+            OnPropertyChanged(nameof(HasFrame));
+            NotifyStage();
+        }
+    }
 
     partial void OnOscObsbotCompatibilityChanged(bool value)
     {
@@ -93,30 +282,29 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
         }
     }
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(OscButtonText))]
-    private bool _oscRunning;
-
-    public MainViewModel(ICameraPlatform platform)
+    partial void OnIsRecordingChanged(bool value)
     {
-        _platform = platform;
-        Refresh();
+        if (value)
+        {
+            _recordWatch.Restart();
+            RecordingElapsed = FormatElapsed(TimeSpan.Zero);
+            _recordTimer ??= CreateTimer(500, () => RecordingElapsed = FormatElapsed(_recordWatch.Elapsed));
+            _recordTimer.Start();
+        }
+        else
+        {
+            _recordTimer?.Stop();
+            _recordWatch.Reset();
+            RecordingElapsed = FormatElapsed(TimeSpan.Zero);
+        }
     }
 
-    public ObservableCollection<CameraInfo> Cameras { get; } = [];
-
-    public ObservableCollection<ControlViewModel> Controls { get; } = [];
-
-    public ObservableCollection<string> Log { get; } = [];
-
-    /// <summary>OSC SetView / libdev cameraSetFovU values 0, 1, 2.</summary>
-    public IReadOnlyList<string> FovOptions { get; } = ["86° (amplo)", "78° (médio)", "65° (fechado)"];
-
-    public string PlatformName => _platform.Name;
-
-    public string OscButtonText => OscRunning ? "Parar servidor OSC" : "Iniciar servidor OSC";
-
-    public string RecordButtonText => IsRecording ? "■ Parar" : "● Gravar";
+    private static DispatcherTimer CreateTimer(int milliseconds, Action tick)
+    {
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(milliseconds) };
+        timer.Tick += (_, _) => tick();
+        return timer;
+    }
 
     [RelayCommand]
     private void Refresh()
@@ -136,10 +324,11 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
         foreach (var c in found)
             Cameras.Add(c);
         SelectedCamera = found.FirstOrDefault(c => previous is not null && c.Path == previous)
+            ?? found.FirstOrDefault(c => _preferredCameraPath is not null && c.Path == _preferredCameraPath)
             ?? found.FirstOrDefault(c => c.IsSupportedTiny)
             ?? found.FirstOrDefault();
         if (found.Count == 0)
-            Status = $"Nenhuma câmera encontrada ({_platform.Name}).";
+            SetStatus(UiText.NoCameraFound(_platform.Name), StatusKind.Warning);
     }
 
     partial void OnSelectedCameraChanged(CameraInfo? value) => OpenCamera(value);
@@ -167,19 +356,27 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
                 if (!GimbalControls.Contains(c) && session.GetRange(c) is { } r && r.Max > r.Min)
                     Controls.Add(new ControlViewModel(session, c, r, Report));
             }
+            BuildControlGroups();
             UpdatePosition();
             HasCamera = true;
             if (PreviewEnabled)
                 _ = StartPreviewAsync(info);
-            Status = HasXu
-                ? $"{info.Name}: XU OBSBOT em {session.ExtensionUnit!.Location}."
-                : $"{info.Name}: sem a Extension Unit OBSBOT; só controles UVC padrão.";
+            SetStatus(HasXu
+                ? UiText.CameraWithXu(info.Name, session.ExtensionUnit!.Location)
+                : UiText.CameraUvcOnly(info.Name), StatusKind.Info);
         }
         catch (Exception ex)
         {
             _loading = false;
             Report(ex);
         }
+    }
+
+    private void BuildControlGroups()
+    {
+        ControlGroups.Clear();
+        foreach (var group in Controls.GroupBy(c => c.Group).OrderBy(g => g.Key))
+            ControlGroups.Add(new ControlGroupViewModel(ControlCatalog.GroupTitle(group.Key), group.OrderBy(c => c.Order).ToList()));
     }
 
     private void CloseCamera()
@@ -190,12 +387,14 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
         _camera?.Dispose();
         _camera = null;
         Controls.Clear();
+        ControlGroups.Clear();
         HasCamera = false;
         HasXu = false;
-        Position = "";
+        PanText = UiText.NoPosition;
+        TiltText = UiText.NoPosition;
     }
 
-    /// <summary>Press-and-hold on a direction button; same signs as OSC SetGimbalUp/Down/Left/Right.</summary>
+    /// <summary>Press-and-hold on a direction button or arrow key; same signs as OSC SetGimbalUp/Down/Left/Right.</summary>
     public void StartMove(string direction)
     {
         double v = Speed / 100;
@@ -208,7 +407,11 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
             _ => throw new ArgumentOutOfRangeException(nameof(direction), direction, null),
         };
         if (Run(() => _camera?.SetPanTiltSpeed(pan, tilt)))
+        {
             _moving = true;
+            _positionTimer ??= CreateTimer(250, UpdatePosition);
+            _positionTimer.Start();
+        }
     }
 
     public void StopMove()
@@ -216,6 +419,7 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
         if (!_moving)
             return;
         _moving = false;
+        _positionTimer?.Stop();
         Run(() => _camera?.SetPanTiltSpeed(0, 0));
         UpdatePosition();
     }
@@ -228,7 +432,13 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
     }
 
     [RelayCommand]
-    private void TriggerPreset(string id) => Run(() => _camera?.TriggerPreset(int.Parse(id, System.Globalization.CultureInfo.InvariantCulture)));
+    private void TriggerPreset(string id) => Run(() => _camera?.TriggerPreset(int.Parse(id, CultureInfo.InvariantCulture)));
+
+    [RelayCommand]
+    private void ZoomIn() => Zoom = Math.Clamp(Zoom + 10, 0, 100);
+
+    [RelayCommand]
+    private void ZoomOut() => Zoom = Math.Clamp(Zoom - 10, 0, 100);
 
     partial void OnZoomChanged(double value)
     {
@@ -252,13 +462,51 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
     {
         try
         {
-            Position = _camera?.GetPanTilt() is { } p ? $"Pan {p.Pan}°  Tilt {p.Tilt}°" : "";
+            if (_camera?.GetPanTilt() is { } p)
+            {
+                PanText = $"{p.Pan}°";
+                TiltText = $"{p.Tilt}°";
+            }
+            else
+            {
+                PanText = UiText.NoPosition;
+                TiltText = UiText.NoPosition;
+            }
         }
         catch (Exception ex)
         {
             Report(ex);
         }
     }
+
+    [RelayCommand]
+    private void RestoreImageDefaults()
+    {
+        foreach (var c in Controls)
+            c.ResetCommand.Execute(null);
+        SetStatus(UiText.ImageRestored, StatusKind.Success);
+    }
+
+    [RelayCommand]
+    private void ShowOsc() => InspectorTabIndex = 1;
+
+    [RelayCommand]
+    private void ShowActivity() => InspectorTabIndex = 2;
+
+    [RelayCommand]
+    private void ToggleFocusMode() => IsFocusMode = !IsFocusMode;
+
+    [RelayCommand]
+    private void ExitFocusMode() => IsFocusMode = false;
+
+    [RelayCommand]
+    private void ToggleGrid() => ShowGrid = !ShowGrid;
+
+    [RelayCommand]
+    private void ClearLog() => Log.Clear();
+
+    [RelayCommand]
+    private void TurnOnPreview() => PreviewEnabled = true;
 
     partial void OnPreviewEnabledChanged(bool value)
     {
@@ -272,7 +520,8 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
     {
         await StopPreviewAsync();
         int generation = _previewGeneration;
-        PreviewInfo = "abrindo vídeo…";
+        PreviewState = PreviewState.Opening;
+        PreviewInfo = UiText.PreviewOpening;
         try
         {
             var preview = await Task.Run(() => CameraPreview.StartAsync(camera, ShowFrame, CancellationToken.None));
@@ -284,12 +533,17 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
             }
             _preview = preview;
             PreviewInfo = preview.Format;
+            PreviewState = PreviewState.Live;
             AddLog($"vídeo: {camera.Name}, {preview.Format}");
         }
         catch (Exception ex)
         {
             if (generation == _previewGeneration)
-                PreviewInfo = $"sem vídeo: {ex.Message}";
+            {
+                PreviewInfo = "";
+                PreviewError = ex.Message;
+                PreviewState = PreviewState.Failed;
+            }
             AddLog($"vídeo: {ex.Message}");
         }
     }
@@ -298,12 +552,13 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
     {
         _previewGeneration++;
         if (_preview?.StopRecording() is { } done)
-            AddLog($"gravação salva: {done.Path} ({done.Frames} quadros)");
+            OnRecordingSaved(done.Path, done.Frames);
         IsRecording = false;
         var preview = _preview;
         _preview = null;
         Frame = null;
         PreviewInfo = "";
+        PreviewState = PreviewState.Off;
         if (preview is not null)
             await preview.DisposeAsync();
     }
@@ -332,11 +587,17 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
     {
         if (_preview is null)
         {
-            Status = "Abra o vídeo para tirar uma foto.";
+            SetStatus(UiText.OpenVideoForPhoto, StatusKind.Warning);
             return;
         }
-        if (Run(() => AddLog($"foto salva: {_preview.SaveSnapshot(MediaFolder(Environment.SpecialFolder.MyPictures))}")))
-            Status = "Foto salva.";
+        string? path = null;
+        if (Run(() => path = _preview.SaveSnapshot(PhotosFolder)))
+        {
+            AddLog($"foto salva: {path}");
+            SetStatus(UiText.PhotoSaved, StatusKind.Success);
+            SnapshotTaken?.Invoke(this, EventArgs.Empty);
+            Notice?.Invoke(this, new StudioNotice(UiText.PhotoSavedTitle, path!, StatusKind.Success, path));
+        }
     }
 
     [RelayCommand]
@@ -344,27 +605,30 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
     {
         if (_preview is null)
         {
-            Status = "Abra o vídeo para gravar.";
+            SetStatus(UiText.OpenVideoForRecording, StatusKind.Warning);
             return;
         }
         if (IsRecording)
         {
             if (_preview.StopRecording() is { } done)
-                AddLog($"gravação salva: {done.Path} ({done.Frames} quadros)");
+                OnRecordingSaved(done.Path, done.Frames);
             IsRecording = false;
         }
-        else if (Run(() => AddLog($"gravando em {_preview.StartRecording(MediaFolder(Environment.SpecialFolder.MyVideos), AddLog)}")))
+        else
         {
-            IsRecording = true;
+            string? path = null;
+            if (Run(() => path = _preview.StartRecording(VideosFolder, AddLog)))
+            {
+                AddLog($"gravando em {path}");
+                IsRecording = true;
+            }
         }
     }
 
-    private static string MediaFolder(Environment.SpecialFolder folder)
+    private void OnRecordingSaved(string path, int frames)
     {
-        string root = Environment.GetFolderPath(folder);
-        if (string.IsNullOrEmpty(root))
-            root = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return Path.Combine(root, "OpenGimbalCam Studio");
+        AddLog($"gravação salva: {path} ({frames} quadros)");
+        Notice?.Invoke(this, new StudioNotice(UiText.RecordingSavedTitle, path, StatusKind.Success, path));
     }
 
     // OSC PCSnapshot / SetPCRecording: called from the server's threads; acts on the video shown here.
@@ -399,7 +663,7 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
         }
         if (!OscUdp && !OscTcp)
         {
-            Status = "Escolha UDP e/ou TCP.";
+            SetStatus(UiText.ChooseTransport, StatusKind.Warning);
             return;
         }
 
@@ -421,14 +685,14 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
                 AddLog($"escutando OSC/{s.Transport.ToString().ToUpperInvariant()} em {s.LocalEndPoint}");
             }
             AddLog($"câmeras OBSBOT: {(_oscHub.Cameras.Count == 0 ? "nenhuma" : string.Join(", ", _oscHub.Cameras.Select((c, i) => $"[{i}] {c.Name}")))}");
+            _oscRunningPort = port;
+            _oscRunningTransports = OscUdp && OscTcp ? "UDP+TCP" : OscUdp ? "UDP" : "TCP";
             OscRunning = true;
         }
         catch (SocketException ex)
         {
             await StopOscAsync();
-            Status = ex.SocketErrorCode == SocketError.AddressAlreadyInUse
-                ? $"Porta {port} em uso. O OBSBOT Center está aberto com OSC ligado?"
-                : ex.Message;
+            SetStatus(ex.SocketErrorCode == SocketError.AddressAlreadyInUse ? UiText.PortInUse(port) : ex.Message, StatusKind.Error);
         }
     }
 
@@ -446,13 +710,20 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
     /// <summary>Thread-safe: the OSC server logs from socket callbacks.</summary>
     private void AddLog(string text)
     {
-        var line = $"{DateTime.Now:HH:mm:ss.fff} {text}";
+        var entry = new LogEntry(DateTime.Now.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture), text,
+            text.StartsWith("erro", StringComparison.OrdinalIgnoreCase));
         Dispatcher.UIThread.Post(() =>
         {
-            Log.Add(line);
+            Log.Add(entry);
             if (Log.Count > MaxLogLines)
                 Log.RemoveAt(0);
         });
+    }
+
+    private void SetStatus(string text, StatusKind kind)
+    {
+        Status = text;
+        StatusKind = kind;
     }
 
     private bool Run(Action action)
@@ -471,14 +742,24 @@ public sealed partial class MainViewModel : ObservableObject, IPcMedia, IDisposa
 
     private void Report(Exception ex)
     {
-        Status = $"Erro: {ex.Message}";
+        SetStatus($"Erro: {ex.Message}", StatusKind.Error);
         AddLog($"erro: {ex.Message}");
+        long now = Environment.TickCount64;
+        if (ex.Message != _lastErrorText || now - _lastErrorTick >= ErrorNoticeIntervalMs)
+        {
+            _lastErrorText = ex.Message;
+            _lastErrorTick = now;
+            Notice?.Invoke(this, new StudioNotice(UiText.ErrorTitle, ex.Message, StatusKind.Error));
+        }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        StopMove();
+        _recordTimer?.Stop();
+        _positionTimer?.Stop();
+        await StopPreviewAsync();
+        await StopOscAsync();
         CloseCamera();
-        StopPreviewAsync().GetAwaiter().GetResult();
-        StopOscAsync().GetAwaiter().GetResult();
     }
 }

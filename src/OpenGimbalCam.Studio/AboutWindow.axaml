@@ -1,16 +1,36 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:OpenGimbalCam.Studio.ViewModels"
+        xmlns:c="using:OpenGimbalCam.Studio.Controls"
         x:Class="OpenGimbalCam.Studio.AboutWindow"
         x:DataType="vm:AboutViewModel"
-        Title="Sobre"
-        Width="460" SizeToContent="Height" CanResize="False"
-        WindowStartupLocation="CenterOwner">
-  <StackPanel Margin="20" Spacing="10">
-    <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="SemiBold" />
-    <TextBlock Text="{Binding Version}" Opacity="0.7" />
-    <TextBlock Text="{Binding Scope}" TextWrapping="Wrap" />
-    <TextBlock Text="{Binding Trademark}" TextWrapping="Wrap" FontSize="12" Opacity="0.7" />
-    <Button Content="Fechar" HorizontalAlignment="Right" Click="OnClose" />
+        Title="Sobre o OpenGimbalCam Studio"
+        Icon="avares://opengimbalcam-studio/Assets/app.ico"
+        Width="520" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource PanelBg}">
+  <StackPanel Margin="24" Spacing="14">
+    <StackPanel Orientation="Horizontal" Spacing="14">
+      <Border Classes="brandmark" Width="48" Height="48" CornerRadius="12">
+        <c:Glyph Width="26" Height="26" Data="{DynamicResource IconCameraVideoFill}"/>
+      </Border>
+      <StackPanel VerticalAlignment="Center" Spacing="2">
+        <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="SemiBold"/>
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Classes="muted" Text="{Binding Version}"/>
+          <TextBlock Classes="muted" Text="·"/>
+          <TextBlock Classes="muted" Text="{Binding License}"/>
+        </StackPanel>
+      </StackPanel>
+    </StackPanel>
+    <TextBlock Text="{Binding Scope}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}"/>
+    <Border Classes="card">
+      <TextBlock Classes="muted" Text="{Binding Trademark}" TextWrapping="Wrap"/>
+    </Border>
+    <TextBlock Classes="muted" Text="{Binding ThirdParty}" TextWrapping="Wrap"/>
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+      <Button Classes="ghost" Content="Repositório no GitHub" Click="OnRepository"/>
+      <Button Classes="primary" Content="Fechar" Click="OnClose"/>
+    </StackPanel>
   </StackPanel>
 </Window>
