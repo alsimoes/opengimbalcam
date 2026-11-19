@@ -64,9 +64,9 @@ Legenda: ✅ validado em hardware (data) · ⚠️ aceito sem efeito verificáve
 | Anti-flicker, compensação de exposição, obturador, ISO | ✅ 2026-10-28 | ⏸ |
 | Servidor OSC (UDP, TCP com prefixo, TCP SLIP) | ✅ 2026-10-28 | ⏸ |
 | `opengimbalcam-studio`: vídeo ao vivo e gimbal | ✅ 2026-10-28 | ⏸ |
-| `opengimbalcam-studio`: foto e gravação | ✅ foto e vídeo 2026-11-09 · ❌ áudio na gravação (sem som na validação; em diagnóstico) | ⏸ |
+| `opengimbalcam-studio`: foto e gravação | ✅ foto e vídeo 2026-11-09 · ✅ áudio na gravação 2026-11-19 | ⏸ |
 | `opengimbalcam-studio`: tela "Sobre" | ✅ 2026-11-09 | ⏸ |
-| `opengimbalcam-studio`: restaurar padrões de imagem | ❌ | ⏸ |
-| `opengimbalcam-studio`: gimbal pelo teclado | ❌ | ⏸ |
-| Pacote `win-x64` (zip e instalador) num Windows 11 limpo | ❌ | ⏸ |
+| `opengimbalcam-studio`: restaurar padrões de imagem | ✅ 2026-11-19 | ⏸ |
+| `opengimbalcam-studio`: gimbal pelo teclado | ✅ 2026-11-19 | ⏸ |
+| Pacote `win-x64` (zip e instalador) no Windows 11 | ✅ 2026-11-19 (máquina do mantenedor, não uma instalação limpa) | ⏸ |
 | Firmware: info/verify/extract | ✅ (arquivo 1.2.6.2) | ⏸ |
