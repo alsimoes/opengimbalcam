@@ -530,7 +530,8 @@ Largura 520, `PanelBg`, ícone do app. Conteúdo:
 
 * **`GetGimbalPosInfo`.** Decida entre manter pan/tilt UVC e converter para a convenção do OBSBOT Center (pitch = −tilt), com base no relatório §10.4 e no ADR-0009. Recomendação: converter, por compatibilidade. Implemente com teste em `OscTests` e registre a decisão no Épico 2 (ADR se mudar o contrato OSC).
 * **Critério do PID FEF0.** Conferido e marcado no PR1 (2026-11-19): `TinyIdentity` filtra a enumeração do DirectShow e do V4L2 e a captura WASAPI.
-* **Itens ⚠️ (HDR, AE de rosto, modos de IA, trava, rastreamento, suspensão).** Depois da HT-2.3, cada um fica validado ou é aceito explicitamente pelo mantenedor, com registro no Épico 2.
+* **Itens ⚠️ (HDR, AE de rosto, modos de IA, trava, rastreamento, suspensão).** Resolvido: confirmados visualmente pelo mantenedor em 2026-11-09, na segunda rodada da HT-2.1. A parte C da HT-2.3 fica opcional.
+* **Áudio na gravação.** A segunda rodada da HT-2.1 gravou sem som mesmo com a captura WASAPI. Diagnosticar (provável falha ao achar o endpoint do microfone pelo PID) e corrigir antes da HT-2.3, em que o S10 bloqueia a release.
 
 ## B3. Metadados e versão
 

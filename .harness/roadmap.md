@@ -45,7 +45,7 @@ O Épico 1 foi concluído em 2026-11-09, um dia antes do fim do suporte ao .NET 
 
 * `GetGimbalPosInfo` (OSC) responde com pan/tilt UVC; o OBSBOT Center lê a atitude do gimbal (`gimbalGetAttitudeInfoR`), em que o pitch tem sinal oposto. Relatório §10.4.
 * O significado dos valores dos comandos diretos (por exemplo, modos de IA) vem do nome das funções da `libdev.dll` e ainda precisa ser confirmado na Tiny. Relatório §5.5.
-* Efeito não verificável por UVC: `SetHDR`, `SetAutoExposureMode`, `ToggleAILock`, `WakeSleep`, `SetAiMode`, `SetTrackingMode` foram aceitos sem erro, mas falta confirmação visual.
+* ~~Efeito não verificável por UVC~~: `SetHDR`, `SetAutoExposureMode`, `ToggleAILock`, `WakeSleep`, `SetAiMode` e `SetTrackingMode` confirmados visualmente pelo mantenedor em 2026-11-09 (HT-2.1, B1 a B6).
 
 ## Matriz de validação
 
@@ -59,12 +59,13 @@ Legenda: ✅ validado em hardware (data) · ⚠️ aceito sem efeito verificáve
 | Escrever pan/tilt absolutos UVC | ✅ 2026-10-28 | ⏸ |
 | Movimento contínuo (UVC `Pan/TiltRelative`) | ✅ 2026-10-28 | ⏸ |
 | XU GET (seletores 2, 6, 7) | ✅ 2026-10-27 | ⏸ |
-| XU SET seletor 6 (comandos diretos) | ⚠️ aceito (HDR, modo de IA) | ⏸ |
+| XU SET seletor 6 (comandos diretos) | ✅ 2026-11-09 (HDR, exposição, modos de IA, trava, rastreamento, suspensão confirmados visualmente) | ⏸ |
 | Mensagem `0xAA` V1 (gimbal por posição) | ✅ 2026-10-28 | ⏸ |
 | Anti-flicker, compensação de exposição, obturador, ISO | ✅ 2026-10-28 | ⏸ |
 | Servidor OSC (UDP, TCP com prefixo, TCP SLIP) | ✅ 2026-10-28 | ⏸ |
 | `opengimbalcam-studio`: vídeo ao vivo e gimbal | ✅ 2026-10-28 | ⏸ |
-| `opengimbalcam-studio`: foto e gravação | ❌ (só testes unitários do AVI) | ⏸ |
+| `opengimbalcam-studio`: foto e gravação | ✅ foto e vídeo 2026-11-09 · ❌ áudio na gravação (sem som na validação; em diagnóstico) | ⏸ |
+| `opengimbalcam-studio`: tela "Sobre" | ✅ 2026-11-09 | ⏸ |
 | `opengimbalcam-studio`: restaurar padrões de imagem | ❌ | ⏸ |
 | `opengimbalcam-studio`: gimbal pelo teclado | ❌ | ⏸ |
 | Pacote `win-x64` (zip e instalador) num Windows 11 limpo | ❌ | ⏸ |

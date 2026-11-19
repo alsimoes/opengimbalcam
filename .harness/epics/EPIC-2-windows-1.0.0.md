@@ -23,7 +23,7 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 ## Tarefas
 
 - [x] [T2] Restringir driver, CLI, ponte OSC e app ao PID FEF0 (ADR-0007), com testes (`TinyIdentity`, 12 casos de teste; 2026-11-09).
-- [ ] [HT] Validar o Studio (vídeo, "Sobre", foto, gravação) e confirmar visualmente os comandos ⚠️ (HDR, exposição, modos de IA, trava de IA, rastreamento, suspensão). HT: em andamento (primeira rodada parcial em 2026-11-09). Guia: [HT-2.1](#ht-21-validar-a-câmera-no-windows). Em 2026-11-19 os itens pendentes passaram para a [HT-2.3](#ht-23-validar-o-candidato-a-release), que roda sobre a nova interface e o pacote.
+- [x] [HT] Validar o Studio (vídeo, "Sobre", foto, gravação) e confirmar visualmente os comandos ⚠️ (HDR, exposição, modos de IA, trava de IA, rastreamento, suspensão). Concluída em 2026-11-09 em duas rodadas; só o áudio da gravação falhou (veja os achados). Guia: [HT-2.1](#ht-21-validar-a-câmera-no-windows). O áudio volta a ser conferido na [HT-2.3](#ht-23-validar-o-candidato-a-release) (S10).
 - [ ] [HT] Escolher a licença do projeto; o ADR e o `LICENSE` ficam com o T3. HT: concluída em 2026-11-19 (MIT). T3: [ADR-0014](../decisions/ADR-0014-licenca-mit.md) (Proposta) e `LICENSE` criados em 2026-11-19; falta o aceite do ADR. Guia: [HT-2.2](#ht-22-escolher-a-licença).
 - [ ] [T3] `GetGimbalPosInfo`: decidir entre pan/tilt UVC e atitude do gimbal.
 - [ ] [T3, decisão HT] Definir o formato de distribuição no Windows (zip autocontido ou instalador) por ADR. Decisão do mantenedor em 2026-11-19: zip portátil e instalador no GitHub Releases. [ADR-0013](../decisions/ADR-0013-distribuicao-no-windows.md) (Proposta) criado; falta o aceite.
@@ -46,6 +46,7 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 * **HT-2.1, primeira rodada (2026-11-09), com a build anterior ao PR #5:** os controles de imagem (matiz, exposição etc.) e os controles da câmera no Studio funcionaram. A tela "Sobre" não foi encontrada porque o PR #5, que a cria, ainda não estava no `master`. Ficam pendentes: A1 a A3 com a build nova e B1 a B6.
 * O mantenedor pediu a interface em inglês como trabalho futuro: virou o [Épico 7](EPIC-7-interface-em-ingles.md).
 * **HT-2.1, foto e gravação (2026-11-09, build anterior ao PR #5):** a foto funcionou (A2). A gravação gera vídeo, mas sem áudio (A3): o `MjpegAviWriter` nunca capturou áudio, então não é regressão, é função que falta.
+* **HT-2.1, segunda rodada (2026-11-09, build com os PRs #5 e #6; registrada no PR #7 e trazida para cá em 2026-11-19):** A1 (tela "Sobre") validado; B1 a B6 funcionaram como esperado, e os comandos ⚠️ do seletor 6 passam a ✅ na matriz. A3: a gravação **continua sem áudio** mesmo com a captura WASAPI ([ADR-0011](../decisions/ADR-0011-audio-na-gravacao.md)); em diagnóstico. O endpoint "OBSBOT Tiny Microphone" existe, com pai `USB\VID_3564&PID_FEF0&MI_02`, mas o ID do endpoint (`SWD\MMDEVAPI\...`) não traz VID nem PID, o que sugere que a busca do microfone pelo PID não encontra o dispositivo. Bloqueia a 1.0.0 (HT-2.3, S10).
 * **2026-11-19, plano da interface e da release aprovado pelo mantenedor:** [plano](../../.docs/plano-studio-e-release-1.0.0.md). Escolhas do mantenedor: vídeo no centro com o deck de movimento abaixo, Inter e JetBrains Mono, licença MIT, zip e instalador. O Linux sai na release seguinte ([Épico 4](EPIC-4-port-linux.md)).
 * **Processo vivo depois de fechar (análise T3, 2026-11-19):** a thread do DirectShow (`ogc-directshow`) já é background. A causa provável é o descarte síncrono no `ShutdownRequested`: `MainViewModel.Dispose` espera `StopPreviewAsync` e `StopOscAsync` com `.GetAwaiter().GetResult()` e pode travar o encerramento. A correção do plano (A4) descarta de forma assíncrona no `Closing` e termina com `Environment.Exit`.
 * **Segurança nos testes de agente:** abrir o Studio com a Tiny conectada liga o vídeo, e com vídeo o gimbal fica ativo e pode se mover. Agentes só executam o app com a câmera desconectada; os testes de UI usam câmera simulada.
@@ -188,7 +189,7 @@ Exige a câmera, observação visual e escrita em hardware. Executar estes passo
 16. **S16.** Reabra o Studio. O tamanho da janela, a câmera e a aba voltam como estavam?
 17. **S17.** Com o vídeo ligado, tire uma captura de tela da janela inteira, para o README.
 
-**Parte C: comandos ⚠️ da HT-2.1.** Com o vídeo ligado no Studio, inicie o servidor OSC na aba **OSC** (UDP, porta padrão). Abra um terminal na pasta de instalação, *%LOCALAPPDATA%\Programs\OpenGimbalCam*, e rode os comandos B1 a B6 da [HT-2.1](#ht-21-validar-a-câmera-no-windows), um por vez, com `.\ogcctl.exe osc send 127.0.0.1` no lugar de `...`. No fim, rode `SetAiMode 0` e `SetHDR 0`.
+**Parte C (opcional): comandos da HT-2.1.** Já validados em 2026-11-09 na segunda rodada da HT-2.1; repita só para conferir com o pacote instalado. Com o vídeo ligado no Studio, inicie o servidor OSC na aba **OSC** (UDP, porta padrão). Abra um terminal na pasta de instalação, *%LOCALAPPDATA%\Programs\OpenGimbalCam*, e rode os comandos B1 a B6 da [HT-2.1](#ht-21-validar-a-câmera-no-windows), um por vez, com `.\ogcctl.exe osc send 127.0.0.1` no lugar de `...`. No fim, rode `SetAiMode 0` e `SetHDR 0`.
 
 #### Como interpretar
 
@@ -196,7 +197,7 @@ Exige a câmera, observação visual e escrita em hardware. Executar estes passo
 
 #### Entregável
 
-Uma linha por item (P1 a P3, S1 a S17, B1 a B6), na conversa com o orquestrador, e a captura de tela do S17. Ele atualiza a matriz de validação, os achados e o README.
+Uma linha por item (P1 a P3, S1 a S17 e, se fizer a parte C, B1 a B6), na conversa com o orquestrador, e a captura de tela do S17. Ele atualiza a matriz de validação, os achados e o README.
 
 #### Critério de aceite
 
