@@ -2,7 +2,7 @@
 
 As fases seguem o [ADR-0006](decisions/ADR-0006-windows-primeiro.md): primeiro o Windows até a 1.0.0, depois o port para Linux. macOS sem previsão.
 
-Ordem: 1 → 2 → 3 → 4, com o 6 em paralelo antes da 1.0.0. O Épico 5 só começa quando houver um Mac. Todos os épicos seguem a premissa de atender só a OBSBOT Tiny original ([ADR-0007](decisions/ADR-0007-premissa-tiny-original.md)).
+Ordem: 1 → 2 → 4, com o 6 em paralelo antes da 1.0.0. O Linux (Épico 4) é a release seguinte à 1.0.0 e não depende mais do Épico 3, que segue como pesquisa (decisão do mantenedor, 2026-11-19). O Épico 5 só começa quando houver um Mac. Todos os épicos seguem a premissa de atender só a OBSBOT Tiny original ([ADR-0007](decisions/ADR-0007-premissa-tiny-original.md)).
 
 **Ação pendente do mantenedor:** a busca de marcas nas bases oficiais ([Épico 6](epics/EPIC-6-busca-de-marcas.md)), com guia passo a passo, antes da release 1.0.0.
 
@@ -27,7 +27,7 @@ O Épico 1 foi concluído em 2026-11-09, um dia antes do fim do suporte ao .NET 
 
 | Épico | Produto | Status | Resumo |
 |---|---|---|---|
-| [Épico 4](epics/EPIC-4-port-linux.md) | P1 + P2 | Proposto (aguarda os Épicos 2 e 3) | Validar o driver e o aplicativo no Linux, regra udev e distribuição `linux-x64` |
+| [Épico 4](epics/EPIC-4-port-linux.md) | P1 + P2 | Proposto (próxima release, sugerida 1.1.0; aguarda o Épico 2) | Validar o driver e o aplicativo no Linux, regra udev e distribuição `linux-x64` |
 
 ## Fase 3: macOS
 
@@ -65,4 +65,7 @@ Legenda: ✅ validado em hardware (data) · ⚠️ aceito sem efeito verificáve
 | Servidor OSC (UDP, TCP com prefixo, TCP SLIP) | ✅ 2026-10-28 | ⏸ |
 | `opengimbalcam-studio`: vídeo ao vivo e gimbal | ✅ 2026-10-28 | ⏸ |
 | `opengimbalcam-studio`: foto e gravação | ❌ (só testes unitários do AVI) | ⏸ |
+| `opengimbalcam-studio`: restaurar padrões de imagem | ❌ | ⏸ |
+| `opengimbalcam-studio`: gimbal pelo teclado | ❌ | ⏸ |
+| Pacote `win-x64` (zip e instalador) num Windows 11 limpo | ❌ | ⏸ |
 | Firmware: info/verify/extract | ✅ (arquivo 1.2.6.2) | ⏸ |

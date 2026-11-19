@@ -5,12 +5,14 @@ Este é um projeto **independente e de código aberto**. Ele **não é afiliado,
 ## Marcas citadas
 
 * **OBSBOT**, **OBSBOT Tiny**, **OBSBOT Center** e os demais nomes de produtos OBSBOT são marcas de seus respectivos titulares.
-* **Microsoft**, **Windows**, **DirectShow** e **.NET** são marcas do grupo de empresas Microsoft.
+* **Microsoft**, **Windows**, **DirectShow**, **SmartScreen** e **.NET** são marcas do grupo de empresas Microsoft.
 * **Linux®** é marca registrada de Linus Torvalds nos EUA e em outros países.
 * **Apple**, **Mac** e **macOS** são marcas da Apple Inc.
 * **Arm** e **Cortex** são marcas da Arm Limited (ou de suas subsidiárias).
 * **Intel** é marca da Intel Corporation.
-* **SigmaStar**, **Qt**, **OBS Studio**, **TouchOSC**, **Bitfocus Companion**, **Stream Deck**, **Tencent**, **Inno Setup**, **Avalonia**, **FlashCap**, **ZeroMQ**, **U-Boot**, **Modbus** e os demais nomes de empresas, produtos e softwares citados pertencem a seus respectivos titulares.
+* **Google** e **Google Fonts** são marcas da Google LLC.
+* **JetBrains** e **JetBrains Mono** são marcas da JetBrains s.r.o.
+* **SigmaStar**, **Qt**, **OBS Studio**, **TouchOSC**, **Bitfocus Companion**, **Stream Deck**, **Tencent**, **Inno Setup**, **Avalonia**, **FlashCap**, **NAudio**, **Bootstrap**, **GitHub**, **Chocolatey**, **ZeroMQ**, **U-Boot**, **Modbus** e os demais nomes de empresas, produtos e softwares citados pertencem a seus respectivos titulares.
 
 As marcas são usadas **apenas de forma nominativa**, para identificar o hardware e o software com que o projeto é compatível ou que foi analisado. Nenhum logotipo ou identidade visual de terceiros é usado.
 
