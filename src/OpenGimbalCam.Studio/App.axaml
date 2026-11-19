@@ -1,8 +1,22 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="OpenGimbalCam.Studio.App"
-             RequestedThemeVariant="Default">
+             RequestedThemeVariant="Dark">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://opengimbalcam-studio/Styles/Tokens.axaml"/>
+        <ResourceInclude Source="avares://opengimbalcam-studio/Styles/Icons.axaml"/>
+        <ResourceInclude Source="avares://opengimbalcam-studio/Styles/ControlThemes.axaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
   <Application.Styles>
-    <FluentTheme />
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Dark" Accent="#FF6C5CE7" RegionColor="#FF0D0F12" ErrorText="#FFF87171"/>
+      </FluentTheme.Palettes>
+    </FluentTheme>
+    <StyleInclude Source="avares://opengimbalcam-studio/Styles/Controls.axaml"/>
   </Application.Styles>
 </Application>

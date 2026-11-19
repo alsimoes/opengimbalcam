@@ -8,5 +8,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/OpenGimbalCam.Tests/OpenGimbalCam.Tests.csproj" />
+    <Project Path="tests/OpenGimbalCam.Studio.Tests/OpenGimbalCam.Studio.Tests.csproj" />
   </Folder>
 </Solution>

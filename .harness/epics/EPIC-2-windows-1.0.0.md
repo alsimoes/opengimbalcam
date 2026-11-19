@@ -30,9 +30,11 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 - [x] [T1] Versionar os projetos (`0.x` até a release, depois `1.0.0`): `0.9.0` em `Directory.Build.props`, `ogcctl --version`. Feito pelo mesmo agente T2, por economia.
 - [x] [T2] Tela "Sobre" no `opengimbalcam-studio` com o aviso de marcas. A conferência visual fica no item A1 da [HT-2.1](#ht-21-validar-a-câmera-no-windows).
 - [ ] [T3, decisão HT] Avaliar a migração do Avalonia 11.3 para a 12.x (vinda do Épico 1).
-- [ ] [T2] Botão no Studio para restaurar todos os controles de imagem ao padrão da câmera (pedido do mantenedor na HT-2.1, 2026-11-09).
+- [x] [T2] Botão no Studio para restaurar todos os controles de imagem ao padrão da câmera (pedido do mantenedor na HT-2.1, 2026-11-09). Feito no PR `feature/studio-pro-ui` ("Restaurar tudo" e botão por controle); efeito na câmera a confirmar na HT-2.3.
 - [ ] [T3 desenho, T2 implementação] Gravação com áudio (obrigatória na 1.0.0, decisão do mantenedor em 2026-11-09): capturar o microfone da Tiny (UAC, WASAPI no Windows) e gravar PCM no AVI junto com o MJPEG. Implementado em 2026-11-09 ([ADR-0011](../decisions/ADR-0011-audio-na-gravacao.md), Aceita); falta validar na câmera (HT-2.1, A3).
-- [ ] [T2] Corrigir: o processo `opengimbalcam-studio` continua vivo, sem janela, depois que a janela é fechada, e trava as DLLs no build seguinte. Suspeita: thread não-background (por exemplo, o `WorkerThread` do DirectShow ou o servidor OSC). Visto em 2026-11-09.
+- [ ] [T2] Corrigir: o processo `opengimbalcam-studio` continua vivo, sem janela, depois que a janela é fechada, e trava as DLLs no build seguinte. Suspeita: thread não-background (por exemplo, o `WorkerThread` do DirectShow ou o servidor OSC). Visto em 2026-11-09. Corrigido no PR `feature/studio-pro-ui` (descarte assíncrono ao fechar e `Environment.Exit` de segurança); confirmar na HT-2.3 que o processo some.
+- [x] [T2] Interface profissional do Studio (Parte A do plano `plano-studio-e-release-1.0.0`): tokens, Inter e JetBrains Mono, ícones Bootstrap 1.13.2 (`tools/ui/gen_icons.py`), ícone do app, nova `MainWindow` (vídeo grande, deck de gimbal, inspetor com abas), atalhos, modo foco, configurações persistidas, tela Sobre e projeto `tests/OpenGimbalCam.Studio.Tests` com snapshots headless. Feito em 2026-11-19 no branch `feature/studio-pro-ui`. Sem câmera real: tudo verificado com câmera simulada.
+- [ ] [HT] HT-2.3 (pendente): com a câmera, conferir a nova interface (vídeo e FPS, gimbal por botões e setas, zoom e `+`/`−`, presets, controles de imagem compactos e "Restaurar tudo", foto com flash e aviso, gravação com o cronômetro, grade, modo foco, OSC, restauração do tamanho da janela e o encerramento sem processo residual).
 
 ## Achados
 

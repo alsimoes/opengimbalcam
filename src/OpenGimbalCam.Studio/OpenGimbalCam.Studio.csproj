@@ -7,6 +7,7 @@
     <AssemblyName>opengimbalcam-studio</AssemblyName>
     <RootNamespace>OpenGimbalCam.Studio</RootNamespace>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +17,11 @@
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.22" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="FlashCap" Version="1.13.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+    <InternalsVisibleTo Include="OpenGimbalCam.Studio.Tests" />
   </ItemGroup>
 
   <ItemGroup>

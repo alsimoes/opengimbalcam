@@ -14,9 +14,12 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var vm = new MainViewModel(CameraPlatform.Create());
-            desktop.MainWindow = new MainWindow { DataContext = vm };
-            desktop.ShutdownRequested += (_, _) => vm.Dispose();
+            var store = StudioSettingsStore.Default;
+            var settings = store.Load();
+            var vm = new MainViewModel(CameraPlatform.Create(), settings);
+            var window = new MainWindow { DataContext = vm, Settings = settings, SettingsStore = store };
+            window.RestoreWindow(settings);
+            desktop.MainWindow = window;
         }
         base.OnFrameworkInitializationCompleted();
     }
