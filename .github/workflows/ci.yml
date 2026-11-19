@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+env:
+  AVALONIA_TELEMETRY_OPTOUT: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+
 jobs:
   build-test:
     runs-on: windows-latest
@@ -19,3 +23,9 @@ jobs:
           global-json-file: global.json
       - run: dotnet build OpenGimbalCam.slnx -c Release
       - run: dotnet test OpenGimbalCam.slnx -c Release --no-build
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-snapshots
+          path: tests/OpenGimbalCam.Studio.Tests/bin/Release/net10.0/ui-snapshots/*.png
+          if-no-files-found: ignore

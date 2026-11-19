@@ -8,6 +8,7 @@
     <RootNamespace>OpenGimbalCam.Studio</RootNamespace>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <AssemblyTitle>OpenGimbalCam Studio</AssemblyTitle>
   </PropertyGroup>
 
   <ItemGroup>
