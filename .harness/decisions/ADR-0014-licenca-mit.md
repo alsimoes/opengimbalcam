@@ -1,6 +1,6 @@
 # ADR-0014: Licença MIT
 
-* **Status:** Proposta
+* **Status:** Aceita (2026-11-19)
 * **Data:** 2026-11-19
 * **Decisores:** André Simões
 
