@@ -12,12 +12,12 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 
 - [x] Driver, CLI, ponte OSC e aplicativo só operam a OBSBOT Tiny original (VID 3564, **PID FEF0**); qualquer outro dispositivo do fabricante é ignorado ([ADR-0007](../decisions/ADR-0007-premissa-tiny-original.md)). Conferido no código em 2026-11-19: `TinyIdentity` filtra a enumeração do DirectShow e do V4L2 e a captura WASAPI.
 - [x] Decisão do [ADR-0008](../decisions/ADR-0008-nomes-dos-produtos.md) (nomes sem a marca do fabricante) tomada e aplicada em 2026-11-09: OpenGimbalCam, repositório `alsimoes/opengimbalcam`.
-- [ ] Busca de marcas nas bases oficiais concluída ([Épico 6](EPIC-6-busca-de-marcas.md)), sem resultado vermelho.
-- [ ] Aplicativo e artefatos de release levam o aviso de marcas (tela "Sobre" e pacote).
-- [ ] Gravação do Studio com áudio do microfone da Tiny, sincronizado com o vídeo (decisão do mantenedor, 2026-11-09).
-- [ ] Coluna Windows da [matriz de validação](../roadmap.md#matriz-de-validação) sem ❌; cada ⚠️ resolvido ou aceito explicitamente pelo mantenedor.
-- [ ] Pendências técnicas do roadmap resolvidas ou adiadas por decisão registrada.
-- [ ] Executável autocontido `win-x64` gerado pela CI (Épico 1), com instruções de instalação e uso.
+- [x] Busca de marcas nas bases oficiais concluída ([Épico 6](EPIC-6-busca-de-marcas.md)), sem resultado vermelho (mantenedor, 2026-11-19).
+- [x] Aplicativo e artefatos de release levam o aviso de marcas (tela "Sobre" e pacote).
+- [x] Gravação do Studio com áudio do microfone da Tiny, sincronizado com o vídeo (decisão do mantenedor, 2026-11-09).
+- [x] Coluna Windows da [matriz de validação](../roadmap.md#matriz-de-validação) sem ❌; cada ⚠️ resolvido ou aceito explicitamente pelo mantenedor.
+- [x] Pendências técnicas do roadmap resolvidas ou adiadas por decisão registrada (`GetGimbalPosInfo` adiado para depois da 1.0.0; veja as tarefas).
+- [x] Executável autocontido `win-x64` gerado pela CI (Épico 1), com instruções de instalação e uso.
 - [ ] Release 1.0.0 publicada, com notas de versão.
 
 ## Tarefas
@@ -25,7 +25,7 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 - [x] [T2] Restringir driver, CLI, ponte OSC e app ao PID FEF0 (ADR-0007), com testes (`TinyIdentity`, 12 casos de teste; 2026-11-09).
 - [x] [HT] Validar o Studio (vídeo, "Sobre", foto, gravação) e confirmar visualmente os comandos ⚠️ (HDR, exposição, modos de IA, trava de IA, rastreamento, suspensão). Concluída em 2026-11-09 em duas rodadas; só o áudio da gravação falhou (veja os achados). Guia: [HT-2.1](#ht-21-validar-a-câmera-no-windows). O áudio volta a ser conferido na [HT-2.3](#ht-23-validar-o-candidato-a-release) (S10).
 - [x] [HT] Escolher a licença do projeto; o ADR e o `LICENSE` ficam com o T3. HT: concluída em 2026-11-19 (MIT). T3: [ADR-0014](../decisions/ADR-0014-licenca-mit.md) e `LICENSE` criados em 2026-11-19; ADR aceito pelo mantenedor em 2026-11-19. Guia: [HT-2.2](#ht-22-escolher-a-licença).
-- [ ] [T3] `GetGimbalPosInfo`: decidir entre pan/tilt UVC e atitude do gimbal.
+- [x] [T3] `GetGimbalPosInfo`: decidir entre pan/tilt UVC e atitude do gimbal. Adiado para depois da 1.0.0 no corte da release (2026-11-19, aprovado pelo mantenedor com o merge do PR do corte): o contrato OSC continua com pan/tilt UVC, documentado como limitação nas notas de versão.
 - [x] [T3, decisão HT] Definir o formato de distribuição no Windows (zip autocontido ou instalador) por ADR. Decisão do mantenedor em 2026-11-19: zip portátil e instalador no GitHub Releases ([ADR-0013](../decisions/ADR-0013-distribuicao-no-windows.md), aceito em 2026-11-19).
 - [x] [T1] Versionar os projetos (`0.x` até a release, depois `1.0.0`): `0.9.0` em `Directory.Build.props`, `ogcctl --version`. Feito pelo mesmo agente T2, por economia.
 - [x] [T2] Tela "Sobre" no `opengimbalcam-studio` com o aviso de marcas. A conferência visual fica no item A1 da [HT-2.1](#ht-21-validar-a-câmera-no-windows).
@@ -36,8 +36,8 @@ Publicar a versão 1.0.0: driver aberto e `opengimbalcam-studio` completos e val
 - [x] [T2, revisão T3] Interface profissional do Studio: identidade visual, vídeo maior, controles de imagem compactos, atalhos, persistência das preferências e testes de UI com snapshots ([plano](../../.docs/plano-studio-e-release-1.0.0.md), Parte A; branch `feature/studio-pro-ui`). Feito em 2026-11-19, verificado só com câmera simulada; revisão T3 pendente. Integrado ao `master` (#9); [ADR-0012](../decisions/ADR-0012-identidade-visual-do-studio.md) aceito em 2026-11-19.
 - [x] [T2, revisão T3] Empacotamento Windows: metadados, `THIRD-PARTY-NOTICES.md` e `licenses/`, `build-release.ps1`, instalador Inno Setup, `release.yml` e `LEIA-ME.txt` (plano, B3 a B7; branch `feature/windows-packaging`). Feito em 2026-11-19; revisão T3 pendente. Verificado: build e testes com 0 avisos; `build-release.ps1 -SkipInstaller` gerou o zip e o `SHA256SUMS.txt`, e o `ogcctl.exe --version` do zip roda. **Pendente:** o `.iss` só é compilado na CI (o Inno Setup não estava instalado na máquina do agente); o Studio do pacote não foi aberto (Tiny possivelmente conectada); `.github/release-notes/v1.0.0.md` (exigido pelo `release.yml` só para tags) e o README ficam para o corte (B8/B9).
 - [x] [HT] Validar o candidato a release com a Tiny: pacote, nova interface e itens pendentes da HT-2.1. Concluída em 2026-11-19, sem falhas (veja os achados). Guia: [HT-2.3](#ht-23-validar-o-candidato-a-release).
-- [ ] [T1/T2, revisão T3] Corte da 1.0.0: versão, notas de versão, matriz e resultado do épico (plano, B9; branch `release/1.0.0`).
-- [ ] [HT] Autorizar a tag `v1.0.0` e publicar a release. HT: aguardando (depende da HT-2.3, do Épico 6 e do corte). Guia: [HT-2.4](#ht-24-publicar-a-100).
+- [x] [T1/T2, revisão T3] Corte da 1.0.0: versão, notas de versão, matriz e resultado do épico (plano, B9; branch `release/1.0.0`). Feito em 2026-11-19 (T3).
+- [ ] [HT] Autorizar a tag `v1.0.0` e publicar a release. Tag autorizada pelo mantenedor em 2026-11-19; falta publicar o rascunho. Guia: [HT-2.4](#ht-24-publicar-a-100).
 
 ## Achados
 

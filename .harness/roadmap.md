@@ -4,7 +4,7 @@ As fases seguem o [ADR-0006](decisions/ADR-0006-windows-primeiro.md): primeiro o
 
 Ordem: 1 → 2 → 4, com o 6 em paralelo antes da 1.0.0. O Linux (Épico 4) é a release seguinte à 1.0.0 e não depende mais do Épico 3, que segue como pesquisa (decisão do mantenedor, 2026-11-19). O Épico 5 só começa quando houver um Mac. Todos os épicos seguem a premissa de atender só a OBSBOT Tiny original ([ADR-0007](decisions/ADR-0007-premissa-tiny-original.md)).
 
-**Ação pendente do mantenedor:** a busca de marcas nas bases oficiais ([Épico 6](epics/EPIC-6-busca-de-marcas.md)), com guia passo a passo, antes da release 1.0.0.
+**Ação pendente do mantenedor:** publicar o rascunho da release 1.0.0 ([HT-2.4](epics/EPIC-2-windows-1.0.0.md#ht-24-publicar-a-100)).
 
 ## Fase 1: Windows 11 → 1.0.0
 
@@ -13,7 +13,7 @@ Ordem: 1 → 2 → 4, com o 6 em paralelo antes da 1.0.0. O Linux (Épico 4) é 
 | [Épico 0](epics/EPIC-0-adocao-do-harness.md) | Governança | Concluído | Adotar o Harness, varrer o workspace e alinhar a documentação |
 | [Épico 1](epics/EPIC-1-runtime-e-ci.md) | P1 + P2 | Concluído (2026-11-09) | Migrar para o .NET 10 (LTS) e criar CI de build e testes no Windows |
 | [Épico 2](epics/EPIC-2-windows-1.0.0.md) | P1 + P2 | Em andamento | Completar a validação no Windows 11, fechar as pendências técnicas e publicar a 1.0.0 |
-| [Épico 6](epics/EPIC-6-busca-de-marcas.md) | Governança | Aceito (2026-11-09), em paralelo; HT: aguardando | Busca de marcas nas bases oficiais (TMview, USPTO, WIPO, INPI) com guia passo a passo; deve terminar antes da publicação da 1.0.0 |
+| [Épico 6](epics/EPIC-6-busca-de-marcas.md) | Governança | Concluído (2026-11-19) | Busca de marcas nas bases oficiais (TMview, USPTO, WIPO, INPI) com guia passo a passo; deve terminar antes da publicação da 1.0.0 |
 
 O Épico 1 foi concluído em 2026-11-09, um dia antes do fim do suporte ao .NET 8. O Épico 6 pode correr em paralelo aos Épicos 1 e 2, porque é executado pelo mantenedor, mas a release 1.0.0 depende dele.
 
@@ -43,8 +43,8 @@ O Épico 1 foi concluído em 2026-11-09, um dia antes do fim do suporte ao .NET 
 
 ## Pendências técnicas (entram no Épico 2)
 
-* `GetGimbalPosInfo` (OSC) responde com pan/tilt UVC; o OBSBOT Center lê a atitude do gimbal (`gimbalGetAttitudeInfoR`), em que o pitch tem sinal oposto. Relatório §10.4.
-* O significado dos valores dos comandos diretos (por exemplo, modos de IA) vem do nome das funções da `libdev.dll` e ainda precisa ser confirmado na Tiny. Relatório §5.5.
+* `GetGimbalPosInfo` (OSC) responde com pan/tilt UVC; o OBSBOT Center lê a atitude do gimbal (`gimbalGetAttitudeInfoR`), em que o pitch tem sinal oposto. Relatório §10.4. **Adiado para depois da 1.0.0** (corte da release, 2026-11-19); documentado como limitação nas notas de versão.
+* O significado dos valores dos comandos diretos (por exemplo, modos de IA) vem do nome das funções da `libdev.dll` e ainda precisa ser confirmado na Tiny. Relatório §5.5. Efeitos confirmados visualmente na HT-2.1 (2026-11-09).
 * ~~Efeito não verificável por UVC~~: `SetHDR`, `SetAutoExposureMode`, `ToggleAILock`, `WakeSleep`, `SetAiMode` e `SetTrackingMode` confirmados visualmente pelo mantenedor em 2026-11-09 (HT-2.1, B1 a B6).
 
 ## Matriz de validação

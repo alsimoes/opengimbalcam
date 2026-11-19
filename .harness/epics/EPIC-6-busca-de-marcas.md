@@ -1,6 +1,6 @@
 # Épico 6: Busca de marcas registradas antes do lançamento público
 
-* **Status:** Aceito pelo mantenedor em 2026-11-09, em paralelo ao Épico 1 por decisão dele (HT: aguardando). **Precisa estar concluído antes da release 1.0.0** (Épico 2).
+* **Status:** Concluído em 2026-11-19 (aceito pelo mantenedor em 2026-11-09).
 * **Produto:** Governança (propriedade intelectual)
 * **Abertura:** 2026-11-09 · **Conclusão:** —
 * **Tier:** **HT** (Human Tier, veja [`tiers.md`](../tiers.md)). Executor: o mantenedor. As bases oficiais de marcas exigem navegação interativa e às vezes cadastro, o que um agente não consegue fazer.
@@ -107,4 +107,4 @@ Para cada base, pesquise os termos T1 a T6 e anote os resultados vivos nas class
 
 ## Resultado
 
-—
+Em 2026-11-19 o mantenedor informou que concluiu a busca nas bases oficiais sem resultado que impeça o uso dos nomes (nenhum vermelho). A tabela detalhada não foi preenchida. Os nomes do [ADR-0008](../decisions/ADR-0008-nomes-dos-produtos.md) ficam mantidos, e a release 1.0.0 está liberada quanto às marcas.

@@ -15,6 +15,17 @@ A OBSBOT Tiny (PID `FEF0`) não tem mais suporte nos drivers atuais do fabricant
 
 **Governança:** objetivo, escopo, regras, decisões e roadmap ficam no Harness, em **[`.harness/`](.harness/README.md)**. O relatório técnico completo, com endereços, desmontagem, hashes e o protocolo OSC, está em **[.docs/investigacao.md](.docs/investigacao.md)**.
 
+## Instalação no Windows
+
+Baixe a versão mais recente em [Releases](https://github.com/alsimoes/opengimbalcam/releases). Requisitos: Windows 11 x64 e a OBSBOT Tiny original.
+
+- **Instalador** (`OpenGimbalCam-<versão>-win-x64-setup.exe`): instala só para o seu usuário, sem administrador, em `%LOCALAPPDATA%\Programs\OpenGimbalCam`, e cria o atalho no menu Iniciar. Para desinstalar, vá em Configurações → Aplicativos.
+- **Zip portátil** (`OpenGimbalCam-<versão>-win-x64.zip`): extraia e abra `opengimbalcam-studio.exe`. Para remover, apague a pasta.
+
+Os executáveis não são assinados: se o SmartScreen avisar, use **Mais informações → Executar assim mesmo**. Confira o download com `Get-FileHash -Algorithm SHA256` e o `SHA256SUMS.txt`.
+
+As fotos e os vídeos ficam em `Imagens\OpenGimbalCam Studio` e `Vídeos\OpenGimbalCam Studio`, e as preferências em `%APPDATA%\OpenGimbalCam Studio`. Feche o OBSBOT Center antes de usar o Studio ou o servidor OSC.
+
 ## Compilar
 
 Requer o .NET 10 SDK (veja `global.json`), no Windows ou no Linux.
